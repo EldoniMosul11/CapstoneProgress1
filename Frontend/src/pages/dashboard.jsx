@@ -56,6 +56,11 @@ export default function Dashboard() {
     totalPengeluaran: 0,
     totalPenjualan: 0
   });
+  const [monthlySummary, setMonthlySummary] = useState({
+    totalPendapatan: 0,
+    totalPengeluaran: 0,
+    totalPenjualan: 0
+  });
   const [chartData, setChartData] = useState({
     weeklyData: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
     maxQuantity: 100,
@@ -111,6 +116,22 @@ export default function Dashboard() {
       totalPenjualan
     });
   }, [filteredData]);
+
+  useEffect(() => {
+    // Calculate monthly summary from current month's data
+    const monthlyPemasukan = auditData.filter(item => item.jenis_transaksi === 'penjualan' && isInCurrentMonth(item.tanggal));
+    const monthlyPengeluaran = auditData.filter(item => item.jenis_transaksi === 'pengeluaran' && isInCurrentMonth(item.tanggal));
+
+    const totalPendapatan = monthlyPemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPengeluaran = monthlyPengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPenjualan = totalPendapatan - totalPengeluaran;
+
+    setMonthlySummary({
+      totalPendapatan,
+      totalPengeluaran,
+      totalPenjualan
+    });
+  }, [auditData]);
 
   useEffect(() => {
     if (auditData.length > 0) {
@@ -209,8 +230,8 @@ export default function Dashboard() {
   const filterData = () => {
     let filtered = auditData; // Tampilkan semua data audit (penjualan dan pengeluaran)
 
-    // Filter to show only current week's data
-    filtered = filtered.filter(item => isInCurrentWeek(item.tanggal));
+    // Filter to show only current month's data
+    filtered = filtered.filter(item => isInCurrentMonth(item.tanggal));
 
     if (searchTerm) {
       filtered = filtered.filter(item =>
@@ -287,9 +308,9 @@ export default function Dashboard() {
       {/* Card Section */}
       <div className="mt-5 flex justify-center gap-8 flex-wrap">
         {[
-          { title: "Total Pendapatan", color: "text-green-600", value: formatCurrency(summary.totalPendapatan), icon: pemasukan },
-          { title: "Total Pengeluaran", color: "text-red-600", value: formatCurrency(summary.totalPengeluaran), icon: pengeluaran },
-          { title: "Total Penjualan", color: "text-blue-500", value: formatCurrency(summary.totalPenjualan), icon: profit },
+          { title: "Total Pendapatan (Bulan)", color: "text-green-600", value: formatCurrency(monthlySummary.totalPendapatan), icon: pemasukan },
+          { title: "Total Pengeluaran (Bulan)", color: "text-red-600", value: formatCurrency(monthlySummary.totalPengeluaran), icon: pengeluaran },
+          { title: "Total Penjualan (Bulan)", color: "text-blue-500", value: formatCurrency(monthlySummary.totalPenjualan), icon: profit },
         ].map((card, i) => (
           <div
             key={i}

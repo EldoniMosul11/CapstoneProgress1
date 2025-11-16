@@ -1,4 +1,4 @@
-// AuditData.jsx
+ // AuditData.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -6,9 +6,28 @@ import searchIcon from "../assets/search.svg";
 import garis from "../assets/garis.svg";
 import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete.svg";
-// import pemasukan from "../assets/pemasukan.svg";
-// import pengeluaran from "../assets/pengeluaran.svg";
-// import profit from "../assets/profit.svg";
+import pemasukan from "../assets/pemasukan.svg";
+import pengeluaran from "../assets/pengeluaran.svg";
+import profit from "../assets/profit.svg";
+
+// Function to check if date is in current month (any year)
+const isInCurrentMonth = (dateInput) => {
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-based
+
+  let date;
+  if (typeof dateInput === 'string') {
+    // Handle ISO date strings like "2025-11-15T17:00:00.000Z"
+    date = new Date(dateInput);
+  } else if (dateInput instanceof Date) {
+    date = dateInput;
+  } else {
+    return false;
+  }
+
+  // Check if month matches current month (ignore year)
+  return date.getMonth() === currentMonth;
+};
 
 export default function AuditData() {
   const [user, setUser] = useState(null);
@@ -17,6 +36,12 @@ export default function AuditData() {
   const [auditData, setAuditData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [monthlySummary, setMonthlySummary] = useState({
+    totalPendapatan: 0,
+    totalPengeluaran: 0,
+    totalPenjualan: 0
+  });
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,7 +62,20 @@ export default function AuditData() {
 
   useEffect(() => {
     fetchAuditData();
-  }, []);
+    // Set up interval to refresh data every day at midnight (or when month changes)
+    const checkMonthChange = () => {
+      const now = new Date().getMonth();
+      if (now !== currentMonth) {
+        setCurrentMonth(now);
+        fetchAuditData(); // Refresh data when month changes
+      }
+    };
+
+    // Check every hour for month change
+    const interval = setInterval(checkMonthChange, 60 * 60 * 1000); // 1 hour
+
+    return () => clearInterval(interval);
+  }, [currentMonth]);
 
   const fetchAuditData = async () => {
     try {
@@ -58,10 +96,28 @@ export default function AuditData() {
       const sumber = item.produk ? item.produk.nama_produk : (item.sumber_pengeluaran || '');
       const matchesSearch = sumber.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTab = activeTab === "pemasukan" ? item.jenis_transaksi === "penjualan" : item.jenis_transaksi === "pengeluaran";
-      return matchesSearch && matchesTab;
+      const matchesMonth = isInCurrentMonth(item.tanggal);
+      return matchesSearch && matchesTab && matchesMonth;
     });
     setFilteredData(filtered);
-  }, [searchTerm, activeTab, auditData]);
+  }, [searchTerm, activeTab, auditData, currentMonth]);
+
+  useEffect(() => {
+    // Calculate monthly summary from all audit data (current month only, regardless of tab)
+    const monthlyData = auditData.filter(item => isInCurrentMonth(item.tanggal));
+    const monthlyPemasukan = monthlyData.filter(item => item.jenis_transaksi === 'penjualan');
+    const monthlyPengeluaran = monthlyData.filter(item => item.jenis_transaksi === 'pengeluaran');
+
+    const totalPendapatan = monthlyPemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPengeluaran = monthlyPengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPenjualan = totalPendapatan - totalPengeluaran;
+
+    setMonthlySummary({
+      totalPendapatan,
+      totalPengeluaran,
+      totalPenjualan
+    });
+  }, [auditData, currentMonth]);
 
   const handleDeleteAudit = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data audit ini?")) {
@@ -111,6 +167,8 @@ export default function AuditData() {
     navigate(path);
   };
 
+
+
   return (
     <div className="min-h-screen bg-gray-100 font-poppins">
 
@@ -123,6 +181,26 @@ export default function AuditData() {
           </h1>
         <img src={garis} alt="" className="w-[40%]" />
        </div>
+
+      {/* Monthly Summary Cards */}
+      <div className="mt-5 flex justify-center gap-8 flex-wrap">
+        {[
+          { title: "Total Pendapatan (Bulan)", color: "text-green-600", value: formatCurrency(monthlySummary.totalPendapatan), icon: pemasukan },
+          { title: "Total Pengeluaran (Bulan)", color: "text-red-600", value: formatCurrency(monthlySummary.totalPengeluaran), icon: pengeluaran },
+          { title: "Total Penghasilan (Bulan)", color: "text-blue-500", value: formatCurrency(monthlySummary.totalPenjualan), icon: profit },
+        ].map((card, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 bg-white shadow-md hover:shadow-lg transition rounded-xl p-4 w-72"
+          >
+            <img src={card.icon} alt="" className="w-10" />
+            <div>
+              <p className={`text-sm font-semibold ${card.color}`}>{card.title}</p>
+              <h2 className="text-lg font-bold text-gray-800">{card.value}</h2>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Tab Navigation */}
       <div className="flex justify-center mt-8">
@@ -183,6 +261,7 @@ export default function AuditData() {
             +
           </button>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-center border-collapse">
             <thead>
