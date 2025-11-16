@@ -8,82 +8,35 @@ import pemasukan from "../assets/pemasukan.svg";
 import pengeluaran from "../assets/pengeluaran.svg";
 import profit from "../assets/profit.svg";
 
-// Data dummy untuk grafik prediksi
-const prediksiData = {
-  labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4", "Minggu 1", "Minggu 2"],
-  values: [15000000, 25000000, 18000000, 32000000, 28000000, 35000000]
-};
-
-// Data dummy untuk grafik penjualan
-const penjualanData = {
-  labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4", "Minggu 1", "Minggu 2"],
-  values: [12000000, 18000000, 15000000, 22000000, 19000000, 25000000]
-};
-
-// Data dummy untuk tabel produk
-const produkData = [
-  {
-    id: 1,
-    produk: "Kerupuk Kulit Pedas",
-    harga: "Rp 7.500",
-    satuan: "Pcs",
-    jumlah: 500,
-    datetime: "28 Jan, 12.30 AM",
-    pendapatan: "Rp 3.750.000",
-    perubahan: "-Rp 800.000",
-    trend: "down"
-  },
-  {
-    id: 2,
-    produk: "Pangsit Bawang Asin",
-    harga: "Rp 6.000",
-    satuan: "Pcs",
-    jumlah: 400,
-    datetime: "25 Jan, 10.40 PM",
-    pendapatan: "Rp 2.400.000",
-    perubahan: "+Rp 800.000",
-    trend: "up"
-  },
-  {
-    id: 3,
-    produk: "Stick Bawang Pedas",
-    harga: "Rp 6.500",
-    satuan: "Pcs",
-    jumlah: 270,
-    datetime: "20 Jan, 10.40 PM",
-    pendapatan: "Rp 1.755.000",
-    perubahan: "+Rp 800.000",
-    trend: "up"
-  },
-  {
-    id: 4,
-    produk: "Kerupuk Kulit Asin",
-    harga: "Rp 7.000",
-    satuan: "Pcs",
-    jumlah: 700,
-    datetime: "15 Jan, 03.29 PM",
-    pendapatan: "Rp 4.900.000",
-    perubahan: "-Rp 800.000",
-    trend: "down"
-  },
-  {
-    id: 5,
-    produk: "Pangsit Bawang Pedas",
-    harga: "Rp 7.500",
-    satuan: "Pcs",
-    jumlah: 300,
-    datetime: "14 Jan, 10.40 PM",
-    pendapatan: "Rp 2.250.000",
-    perubahan: "+Rp 800.000",
-    trend: "up"
-  }
-];
-
 export default function DashboardPrediksi() {
   const [user, setUser] = useState(null);
+  const [auditData, setAuditData] = useState([]);
+  const [produkData, setProdukData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredData, setFilteredData] = useState(produkData);
+  const [filteredData, setFilteredData] = useState([]);
+  const [summary, setSummary] = useState({
+    totalPendapatan: 0,
+    totalPengeluaran: 0,
+    totalPenjualan: 0
+  });
+  const [chartData, setChartData] = useState({
+    prediksiData: { labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"], values: [0, 0, 0, 0] },
+    penjualanData: { labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"], values: [0, 0, 0, 0] }
+  });
   const navigate = useNavigate();
+
+  // Fungsi untuk mengecek apakah tanggal dalam minggu ini
+  const isInCurrentWeek = (date) => {
+    if (!(date instanceof Date)) date = new Date(date);
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Senin
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return date >= startOfWeek && date <= endOfWeek;
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -102,18 +55,129 @@ export default function DashboardPrediksi() {
   }, [navigate]);
 
   useEffect(() => {
-    const filtered = produkData.filter(item =>
-      item.produk.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredData(filtered);
+    fetchAuditData();
+    fetchProdukData();
+  }, []);
+
+  useEffect(() => {
+    if (auditData.length > 0) {
+      processData();
+      filterData();
+    }
+  }, [auditData]);
+
+  useEffect(() => {
+    filterData();
   }, [searchTerm]);
 
-  const handleSearch = () => {
-    const filtered = produkData.filter(item =>
+  const fetchAuditData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await api.get("/audit", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAuditData(res.data.data);
+    } catch (error) {
+      console.error("Error fetching audit data:", error);
+    }
+  };
+
+  const fetchProdukData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await api.get("/produk", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProdukData(res.data);
+    } catch (error) {
+      console.error("Error fetching produk data:", error);
+    }
+  };
+
+  const processData = () => {
+    const penjualanData = auditData.filter(item => item.jenis_transaksi === 'penjualan');
+    const pengeluaranData = auditData.filter(item => item.jenis_transaksi === 'pengeluaran');
+
+    // Calculate summary for current week
+    const currentWeekPenjualan = penjualanData.filter(item => isInCurrentWeek(item.tanggal));
+    const currentWeekPengeluaran = pengeluaranData.filter(item => isInCurrentWeek(item.tanggal));
+
+    const totalPendapatan = currentWeekPenjualan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPengeluaran = currentWeekPengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPenjualan = totalPendapatan - totalPengeluaran;
+
+    setSummary({
+      totalPendapatan,
+      totalPengeluaran,
+      totalPenjualan
+    });
+
+    // Process chart data for weekly sales
+    const weeks = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]; // 4 weeks
+    penjualanData.forEach(item => {
+      const date = new Date(item.tanggal);
+      const week = Math.floor((date.getDate() - 1) / 7);
+      if (week >= 0 && week < 4) {
+        weeks[week][0] += Number(item.total_pendapatan) || 0; // Prediksi (same as penjualan for now)
+        weeks[week][1] += Number(item.total_pendapatan) || 0; // Penjualan
+      }
+    });
+
+    setChartData({
+      prediksiData: { labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"], values: weeks.map(w => w[0]) },
+      penjualanData: { labels: ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"], values: weeks.map(w => w[1]) }
+    });
+  };
+
+  const filterData = () => {
+    const currentWeekSales = auditData.filter(item =>
+      item.jenis_transaksi === 'penjualan' // Temporarily show all penjualan for debugging
+    );
+
+    const mappedData = currentWeekSales.map(item => ({
+      id: item.id,
+      produk: item.produk?.nama_produk || 'N/A',
+      harga: `Rp ${Number(item.harga_satuan).toLocaleString('id-ID')}`,
+      satuan: item.produk?.unit || 'Pcs',
+      jumlah: item.jumlah,
+      datetime: formatDateTime(item.tanggal),
+      pendapatan: `Rp ${Number(item.total_pendapatan).toLocaleString('id-ID')}`,
+      perubahan: "+Rp 0", // Placeholder, can be calculated if needed
+      trend: "up" // Placeholder
+    }));
+
+    const filtered = mappedData.filter(item =>
       item.produk.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
     setFilteredData(filtered);
   };
+
+  const handleSearch = () => {
+    filterData();
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const hour = date.getHours();
+    const min = date.getMinutes();
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${day} ${month}, ${hour12}.${min.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const maxPrediksiValue = Math.max(...chartData.prediksiData.values);
+  const maxPenjualanValue = Math.max(...chartData.penjualanData.values);
 
   // Fungsi untuk render grafik bar
   const renderBarChart = (data, maxValue, color) => {
@@ -125,7 +189,7 @@ export default function DashboardPrediksi() {
             <div key={index} className="flex flex-col items-center flex-1 mx-1">
               <div
                 className="w-full rounded-t-lg transition-all duration-500"
-                style={{ 
+                style={{
                   height: `${(value / maxValue) * chartHeight}px`,
                   backgroundColor: color
                 }}
@@ -134,7 +198,7 @@ export default function DashboardPrediksi() {
             </div>
           ))}
         </div>
-        
+
         {/* Grid lines */}
         {[0, 25, 50, 75, 100].map((percent, index) => (
           <div
@@ -146,9 +210,6 @@ export default function DashboardPrediksi() {
       </div>
     );
   };
-
-  const maxPrediksiValue = Math.max(...prediksiData.values);
-  const maxPenjualanValue = Math.max(...penjualanData.values);
 
   return (
     <div className="min-h-screen bg-gray-100 font-poppins">
@@ -167,9 +228,9 @@ export default function DashboardPrediksi() {
       {/* Card Section */}
       <div className="mt-5 flex justify-center gap-8 flex-wrap">
         {[
-          { title: "Total Pendapatan", color: "text-green-600", value: "Rp 15.000.000", change: "+Rp 2.000.000", changeColor: "text-green-600", icon: pemasukan },
-          { title: "Total Pengeluaran", color: "text-red-600", value: "Rp 5.000.000", change: "+Rp 4.000.000", changeColor: "text-green-600", icon: pengeluaran },
-          { title: "Profit Penjualan", color: "text-blue-500", value: "Rp 10.000.000", change: "-Rp 800.000", changeColor: "text-red-600", icon: profit },
+          { title: "Total Pendapatan", color: "text-green-600", value: formatCurrency(summary.totalPendapatan), change: "+Rp 0", changeColor: "text-green-600", icon: pemasukan },
+          { title: "Total Pengeluaran", color: "text-red-600", value: formatCurrency(summary.totalPengeluaran), change: "+Rp 0", changeColor: "text-green-600", icon: pengeluaran },
+          { title: "Profit Penjualan", color: "text-blue-500", value: formatCurrency(summary.totalPenjualan), change: "+Rp 0", changeColor: "text-green-600", icon: profit },
         ].map((card, i) => (
           <div
             key={i}
@@ -193,7 +254,7 @@ export default function DashboardPrediksi() {
         {/* Prediksi Pendapatan Chart */}
         <div className="bg-white rounded-xl shadow-md p-6 w-full md:w-[48%]">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Prediksi Pendapatan</h3>
-          {renderBarChart(prediksiData, maxPrediksiValue, '#4CAF50')}
+          {renderBarChart(chartData.prediksiData, Math.max(...chartData.prediksiData.values) || 1, '#4CAF50')}
           <div className="text-center mt-4 text-sm text-gray-600 font-medium">
             Bulan Oktober
           </div>
@@ -202,7 +263,7 @@ export default function DashboardPrediksi() {
         {/* Total Penjualan Chart */}
         <div className="bg-white rounded-xl shadow-md p-6 w-full md:w-[48%]">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Penjualan</h3>
-          {renderBarChart(penjualanData, maxPenjualanValue, '#2196F3')}
+          {renderBarChart(chartData.penjualanData, Math.max(...chartData.penjualanData.values) || 1, '#2196F3')}
           <div className="text-center mt-4 text-sm text-gray-600 font-medium">
             Bulan Oktober
           </div>

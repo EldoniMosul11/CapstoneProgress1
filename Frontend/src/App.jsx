@@ -30,9 +30,7 @@ function AppContent() {
           navigate("/login");
           return;
         }
-        const res = await api.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get("/auth/me");
         setUser(res.data);
       } catch (err) {
         localStorage.removeItem("token");

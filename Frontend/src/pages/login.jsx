@@ -18,6 +18,8 @@ export default function Login() {
     } catch (err) {
       alert("Login gagal!");
       console.error(err.response?.data || err.message);
+      // Clear any existing token on login failure
+      localStorage.removeItem("token");
     }
   };
 

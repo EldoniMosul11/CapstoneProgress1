@@ -55,7 +55,7 @@ export const login = (req, res) => {
     const validPass = bcrypt.compareSync(password, data[0].password);
     if (!validPass) return res.status(401).json({ message: "Password salah" });
 
-    const token = jwt.sign({ id: data[0].id }, "secretkey", { expiresIn: "1h" });
+    const token = jwt.sign({ id: data[0].id }, "secretkey", { expiresIn: "24h" });
     const user = new User(data[0]);
 
     res.json({

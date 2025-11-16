@@ -18,6 +18,33 @@ const getWeek = (dateStr) => {
   return -1;
 };
 
+// Function to check if date is in current week
+const isInCurrentWeek = (dateString) => {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  if (now.getDay() === 0) { // Sunday
+    startOfWeek.setDate(now.getDate() - 6); // Go back to Monday
+  } else {
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
+  }
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  const itemDate = new Date(dateString);
+  return itemDate >= startOfWeek && itemDate <= endOfWeek;
+};
+
+// Function to check if date is in current month
+const isInCurrentMonth = (dateString) => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+  const itemDate = new Date(dateString);
+  return itemDate >= startOfMonth && itemDate <= endOfMonth;
+};
+
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [auditData, setAuditData] = useState([]);
@@ -70,20 +97,38 @@ export default function Dashboard() {
   }, [auditData, searchTerm]);
 
   useEffect(() => {
+    // Calculate summary from current week's data
+    const pemasukan = filteredData.filter(item => item.jenis_transaksi === 'penjualan');
+    const pengeluaran = filteredData.filter(item => item.jenis_transaksi === 'pengeluaran');
+
+    const totalPendapatan = pemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPengeluaran = pengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    const totalPenjualan = totalPendapatan - totalPengeluaran;
+
+    setSummary({
+      totalPendapatan,
+      totalPengeluaran,
+      totalPenjualan
+    });
+  }, [filteredData]);
+
+  useEffect(() => {
     if (auditData.length > 0) {
       const penjualanData = auditData.filter(item => item.jenis_transaksi === 'penjualan');
 
-      // Process weekly data for bar chart (jumlah terjual per produk per minggu)
+      // Process weekly data for bar chart (jumlah terjual per produk per minggu) - based on current month
       const weeks = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]; // [kerupuk, pangsit, stick] per minggu
       penjualanData.forEach(item => {
-        const week = getWeek(item.tanggal);
-        if (week !== -1) {
-          if (item.produk?.nama_produk?.toLowerCase().includes("kerupuk")) {
-            weeks[week][0] += item.jumlah;
-          } else if (item.produk?.nama_produk?.toLowerCase().includes("pangsit")) {
-            weeks[week][1] += item.jumlah;
-          } else if (item.produk?.nama_produk?.toLowerCase().includes("stik")) {
-            weeks[week][2] += item.jumlah;
+        if (isInCurrentMonth(item.tanggal)) {
+          const week = getWeek(item.tanggal);
+          if (week !== -1) {
+            if (item.produk?.nama_produk?.toLowerCase().includes("kerupuk")) {
+              weeks[week][0] += item.jumlah;
+            } else if (item.produk?.nama_produk?.toLowerCase().includes("pangsit")) {
+              weeks[week][1] += item.jumlah;
+            } else if (item.produk?.nama_produk?.toLowerCase().includes("stik")) {
+              weeks[week][2] += item.jumlah;
+            }
           }
         }
       });
@@ -100,11 +145,12 @@ export default function Dashboard() {
         yAxisLabels.push(maxQuantity);
       }
 
-      // Calculate total quantity and percentages for pie chart (tetap berdasarkan jumlah produk)
-      const totalQuantity = penjualanData.reduce((sum, item) => sum + item.jumlah, 0);
-      const kerupukTotal = penjualanData.filter(item => item.produk?.nama_produk?.toLowerCase().includes("kerupuk")).reduce((sum, item) => sum + item.jumlah, 0);
-      const pangsitTotal = penjualanData.filter(item => item.produk?.nama_produk?.toLowerCase().includes("pangsit")).reduce((sum, item) => sum + item.jumlah, 0);
-      const stickTotal = penjualanData.filter(item => item.produk?.nama_produk?.toLowerCase().includes("stik")).reduce((sum, item) => sum + item.jumlah, 0);
+      // Calculate total quantity and percentages for pie chart (based on current week)
+      const currentWeekPenjualan = penjualanData.filter(item => isInCurrentWeek(item.tanggal));
+      const totalQuantity = currentWeekPenjualan.reduce((sum, item) => sum + item.jumlah, 0);
+      const kerupukTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("kerupuk")).reduce((sum, item) => sum + item.jumlah, 0);
+      const pangsitTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("pangsit")).reduce((sum, item) => sum + item.jumlah, 0);
+      const stickTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("stik")).reduce((sum, item) => sum + item.jumlah, 0);
 
       const percentages = totalQuantity > 0 ? [
         (kerupukTotal / totalQuantity) * 100,
@@ -143,20 +189,6 @@ export default function Dashboard() {
 
       const data = res.data.data;
       setAuditData(data);
-
-      // Calculate summary
-      const pemasukan = data.filter(item => item.jenis_transaksi === 'penjualan');
-      const pengeluaran = data.filter(item => item.jenis_transaksi === 'pengeluaran');
-
-      const totalPendapatan = pemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-      const totalPengeluaran = pengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-      const totalPenjualan = totalPendapatan - totalPengeluaran;
-
-      setSummary({
-        totalPendapatan,
-        totalPengeluaran,
-        totalPenjualan
-      });
     } catch (error) {
       console.error("Error fetching audit data:", error);
     }
@@ -177,6 +209,9 @@ export default function Dashboard() {
   const filterData = () => {
     let filtered = auditData; // Tampilkan semua data audit (penjualan dan pengeluaran)
 
+    // Filter to show only current week's data
+    filtered = filtered.filter(item => isInCurrentWeek(item.tanggal));
+
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.produk?.nama_produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,7 +220,33 @@ export default function Dashboard() {
       );
     }
 
-    setFilteredData(filtered);
+    // Group penjualan by product name
+    const penjualanGrouped = {};
+    filtered.filter(item => item.jenis_transaksi === 'penjualan').forEach(item => {
+      const key = item.produk?.nama_produk || 'N/A';
+      if (!penjualanGrouped[key]) {
+        penjualanGrouped[key] = {
+          jenis_transaksi: 'penjualan',
+          produk: { nama_produk: key },
+          harga_satuan: item.harga_satuan,
+          jumlah: 0,
+          total_pendapatan: 0,
+          tanggal: item.tanggal,
+          isGrouped: true
+        };
+      }
+      penjualanGrouped[key].jumlah += item.jumlah;
+      penjualanGrouped[key].total_pendapatan += Number(item.total_pendapatan) || 0;
+      if (new Date(item.tanggal) > new Date(penjualanGrouped[key].tanggal)) {
+        penjualanGrouped[key].tanggal = item.tanggal;
+        penjualanGrouped[key].harga_satuan = item.harga_satuan; // Update to latest price
+      }
+    });
+
+    const pengeluaran = filtered.filter(item => item.jenis_transaksi === 'pengeluaran');
+    const groupedData = [...Object.values(penjualanGrouped), ...pengeluaran];
+
+    setFilteredData(groupedData);
   };
 
   const formatCurrency = (amount) => {
