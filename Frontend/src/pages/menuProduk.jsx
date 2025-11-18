@@ -1,7 +1,7 @@
 // MenuProduk.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
- import api from "../api";
+import api from "../api";
 import kosong from "../assets/kosong.png";
 import garis from "../assets/garis.svg";
 import tambah from "../assets/tambah.svg";
@@ -69,9 +69,9 @@ export default function MenuProduk() {
   };
 
   const handleTambahProduk = () => {
-    alert('Fitur Tambah Produk akan dibuka');
+    alert('Fitur Tambah Produk akan dibuka (demo)');
     // Navigasi ke halaman tambah produk
-    navigate("/produk/input");
+    // navigate("/produk/input");
   };
 
   const handleDeleteProduk = async (product) => {

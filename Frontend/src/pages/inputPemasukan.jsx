@@ -72,15 +72,28 @@ export default function InputPemasukan() {
 
     try {
       const token = localStorage.getItem("token");
+      
+      // Panggil API
       const res = await api.post("/audit/penjualan", formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // Sukses
       alert("Data pemasukan berhasil ditambahkan!");
       navigate("/auditdata");
+      
     } catch (error) {
       console.error("Error adding pemasukan:", error);
-      alert("Gagal menambahkan data pemasukan. Silakan coba lagi.");
+      
+      // --- PERBAIKAN UTAMA: TANGKAP PESAN DARI BACKEND ---
+      if (error.response && error.response.data && error.response.data.message) {
+          // Tampilkan pesan spesifik (misal: "Stok tidak mencukupi...")
+          alert(`Gagal: ${error.response.data.message}`);
+      } else {
+          // Fallback untuk error jaringan/server mati
+          alert("Gagal menambahkan data pemasukan. Terjadi kesalahan server.");
+      }
+      
     } finally {
       setIsLoading(false);
     }

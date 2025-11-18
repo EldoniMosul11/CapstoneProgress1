@@ -23,8 +23,8 @@ export default function Navbar({ username }) {
 
     <ul className="hidden md:flex gap-8 list-none">
       <li><a href="/dashboard" className="text-[#222] font-semibold hover:text-black hover:underline">Beranda</a></li>
-      <li><a href="/MenuProduk" className="text-[#222] font-medium hover:text-black hover:underline">Produk</a></li>
-      <li><a href="/AuditData" className="text-[#222] font-medium hover:text-black hover:underline">Audit Data</a></li>
+      <li><a href="/menu-produk" className="text-[#222] font-medium hover:text-black hover:underline">Produk</a></li>
+      <li><a href="/auditdata" className="text-[#222] font-medium hover:text-black hover:underline">Audit Data</a></li>
       <li><a href="/dashboardPrediksi" className="text-[#222] font-medium hover:text-black hover:underline">Dashboard Prediksi</a></li>
     </ul>
 

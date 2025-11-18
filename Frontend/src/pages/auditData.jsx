@@ -171,58 +171,66 @@ export default function AuditData() {
       </div>
 
       {/* Table Section */}
-      <div className="flex flex-col bg-white p-6 rounded-xl shadow-md mt-6 mx-auto w-[95%] md:w-[90%] max-w-6xl">
+      <div className="flex flex-col bg-white p-6 rounded-xl shadow-md mt-6 mx-auto w-[95%] md:w-[90%] max-w-6xl mb-8">
+        {/* Header Tabel & Tombol Tambah */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 className={`text-xl font-bold text-gray-800 border-l-4 pl-3 ${
+            activeTab === "pemasukan" ? "border-green-500" : "border-red-500"
+          }`}>
             {activeTab === "pemasukan" ? "Data Pemasukan" : "Data Pengeluaran"}
           </h2>
           <button
             onClick={handleAdd}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg font-medium transition-colors"
           >
             +
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-center border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Pcs</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Sumber</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Harga</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Satuan</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Jumlah</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">DateTime</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Total</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 border-b">Aksi</th>
+
+        {/* --- AREA SCROLLABLE TABEL --- */}
+        <div className="overflow-x-auto overflow-y-auto max-h-[700px] border rounded-lg relative">
+          <table className="w-full text-sm text-center border-collapse relative">
+            
+            {/* Header Sticky */}
+            <thead className="sticky top-0 z-10 bg-gray-100 text-gray-600 shadow-sm">
+              <tr>
+                <th className="py-3 px-4 font-semibold border-b">No</th>
+                <th className="py-3 px-4 font-semibold border-b">Sumber</th>
+                <th className="py-3 px-4 font-semibold border-b">Harga</th>
+                <th className="py-3 px-4 font-semibold border-b">Satuan</th>
+                <th className="py-3 px-4 font-semibold border-b">Jumlah</th>
+                <th className="py-3 px-4 font-semibold border-b">DateTime</th>
+                <th className="py-3 px-4 font-semibold border-b">Total</th>
+                <th className="py-3 px-4 font-semibold border-b">Aksi</th>
               </tr>
             </thead>
+
             <tbody>
               {filteredData.map((item, index) => (
-                <tr key={item.id} className="hover:bg-gray-50 border-b">
+                <tr key={item.id} className="hover:bg-gray-50 border-b last:border-0 transition-colors">
                   <td className="py-3 px-4">{index + 1}</td>
                   <td className="py-3 px-4 font-medium text-gray-800">
                     {item.produk ? item.produk.nama_produk : item.sumber_pengeluaran}
                   </td>
                   <td className="py-3 px-4">{formatCurrency(item.harga_satuan)}</td>
-                  <td className="py-3 px-4">{item.produk ? item.produk.unit : item.satuan}</td>
-                  <td className="py-3 px-4">{item.jumlah}</td>
-                  <td className="py-3 px-4">{formatDate(item.tanggal)}</td>
-                  <td className={`py-3 px-4 font-semibold ${
+                  <td className="py-3 px-4">{item.produk ? item.produk.unit : (item.satuan || "Pcs")}</td>
+                  <td className="py-3 px-4 font-bold text-blue-600">{item.jumlah}</td> {/* Bold jumlah biar jelas */}
+                  <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.tanggal)}</td> {/* No Wrap tanggal */}
+                  <td className={`py-3 px-4 font-semibold whitespace-nowrap ${
                     item.jenis_transaksi === 'penjualan' ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {item.jenis_transaksi === 'penjualan' ? '+' : '-'}{formatCurrency(item.total_pendapatan)}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
                     <button
                       onClick={() => handleEditAudit(item.id)}
-                      className="text-blue-500 hover:text-blue-700 mr-2"
+                      className="text-blue-500 hover:text-blue-700 mr-3 transition-transform hover:scale-110"
                     >
                       <img src={editIcon} alt="Edit" className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDeleteAudit(item.id)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 transition-transform hover:scale-110"
                     >
                       <img src={deleteIcon} alt="Delete" className="w-5 h-5" />
                     </button>
@@ -233,8 +241,8 @@ export default function AuditData() {
           </table>
           
           {filteredData.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Tidak ada data yang ditemukan
+            <div className="text-center py-10 text-gray-400 bg-gray-50">
+              <p className="text-lg">Tidak ada data yang ditemukan</p>
             </div>
           )}
         </div>
