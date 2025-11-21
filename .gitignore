@@ -9,6 +9,10 @@ Frontend/dist/
 Frontend/build/
 Backend/dist/
 Backend/build/
+.vite/
+.cache/
+.parcel-cache/
+.next/
 
 # ======== Environment files ========
 .env
@@ -30,9 +34,25 @@ Thumbs.db
 # ======== IDE / Editor ========
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # ======== OS ========
 desktop.ini
 
-# ======== Misc ========
-package-lock.json
+# ======== Python Virtual Environment ========
+venv/
+env/
+
+# ======== Python Cache and Compiled Files ========
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ======== Jupyter/Colab Cache ========
+.ipynb_checkpoints/
+
+# ======== File Uploads (Opsional) ========
+uploads/
+static/uploads/

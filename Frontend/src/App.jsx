@@ -49,8 +49,8 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/MenuProduk" element={<MenuProduk />} />
-          <Route path="/AuditData" element={<AuditData />} />
+          <Route path="/menu-produk" element={<MenuProduk />} /> 
+          <Route path="/auditdata" element={<AuditData />} />
           <Route path="/detailProduk/:id" element={<DetailProduk />} />
           <Route path="/produk/edit/:id" element={<EditProduk />} />
           <Route path="/produk/input" element={<InputProduk />} />

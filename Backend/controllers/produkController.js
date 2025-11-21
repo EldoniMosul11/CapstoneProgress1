@@ -91,8 +91,8 @@ export const updateProduk = (req, res) => {
   const { namaProduk, detailProduk, hargaSatuan, stokTersedia } = req.body;
   const gambar = req.file ? req.file.filename : null;
 
-  if (!namaProduk || !detailProduk) {
-    return res.status(400).json({ message: "Nama produk dan detail produk wajib diisi" });
+  if (!namaProduk) { 
+      return res.status(400).json({ message: "Nama produk wajib diisi" });
   }
 
   let sql, values;

@@ -1,481 +1,478 @@
-import { useEffect, useState } from "react";
-import api from "../api";
+// File: src/pages/Beranda.jsx
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import pemasukan from "../assets/pemasukan.svg";
-import pengeluaran from "../assets/pengeluaran.svg";
-import profit from "../assets/profit.svg";
+import Navbar from "../layout/navbar";
+import api from "../api";
+
+// Import Assets
 import searchIcon from "../assets/search.svg";
+import pemasukanIcon from "../assets/pemasukan.svg";
+import pengeluaranIcon from "../assets/pengeluaran.svg";
+import profitIcon from "../assets/profit.svg";
 import garis from "../assets/garis.svg";
 
-// Function to get week from date
-const getWeek = (dateStr) => {
-  const date = new Date(dateStr);
-  const day = date.getDate();
-  if (day >= 1 && day <= 7) return 0; // Week 1
-  if (day >= 8 && day <= 14) return 1; // Week 2
-  if (day >= 15 && day <= 21) return 2; // Week 3
-  if (day >= 22 && day <= 31) return 3; // Week 4
-  return -1;
-};
+// Import Charts
+import PieChart from "../components/PieChart";
+import BarChart from "../components/BarChart";
 
-// Function to check if date is in current week
-const isInCurrentWeek = (dateString) => {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  if (now.getDay() === 0) { // Sunday
-    startOfWeek.setDate(now.getDate() - 6); // Go back to Monday
-  } else {
-    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
-  }
-  startOfWeek.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
-  endOfWeek.setHours(23, 59, 59, 999);
-  const itemDate = new Date(dateString);
-  return itemDate >= startOfWeek && itemDate <= endOfWeek;
-};
-
-// Function to check if date is in current month
-const isInCurrentMonth = (dateString) => {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-  const itemDate = new Date(dateString);
-  return itemDate >= startOfMonth && itemDate <= endOfMonth;
-};
-
-export default function Dashboard() {
+export default function Beranda() {
   const [user, setUser] = useState(null);
   const [auditData, setAuditData] = useState([]);
-  const [produkData, setProdukData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredData, setFilteredData] = useState([]);
+  
+  // State untuk Scorecard (Ditambah properti Diff)
   const [summary, setSummary] = useState({
     totalPendapatan: 0,
+    diffPendapatan: 0,
     totalPengeluaran: 0,
-    totalPenjualan: 0
+    diffPengeluaran: 0,
+    totalProfit: 0,
+    diffProfit: 0,
+    mingguData: ""
   });
-  const [monthlySummary, setMonthlySummary] = useState({
-    totalPendapatan: 0,
-    totalPengeluaran: 0,
-    totalPenjualan: 0
-  });
-  const [chartData, setChartData] = useState({
-    weeklyData: [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]],
-    maxQuantity: 100,
-    yAxisLabels: [0, 100],
-    totalQuantity: 0,
-    percentages: [0, 0, 0],
-    gradient: 'conic-gradient(#4CAF50 0% 33%, #2196F3 33% 66%, #FF9800 66% 100%)',
-    legendItems: [
-      { label: 'Kerupuk', color: 'bg-green-500', value: '0%' },
-      { label: 'Pangsit', color: 'bg-blue-500', value: '0%' },
-      { label: 'Stick', color: 'bg-orange-500', value: '0%' }
-    ]
-  });
+
+  // State untuk Charts
+  const [pieData, setPieData] = useState(null);
+  const [barData, setBarData] = useState(null);
+  const [filteredTableData, setFilteredTableData] = useState([]);
+
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await api.get("/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(res.data);
-      } catch (err) {
-        localStorage.removeItem("token");
-        navigate("/");
-      }
-    };
-    fetchUser();
-  }, [navigate]);
-
-  useEffect(() => {
-    fetchAuditData();
-    fetchProdukData();
-  }, []);
-
-  useEffect(() => {
-    filterData();
-  }, [auditData, searchTerm]);
-
-  useEffect(() => {
-    // Calculate summary from current week's data
-    const pemasukan = filteredData.filter(item => item.jenis_transaksi === 'penjualan');
-    const pengeluaran = filteredData.filter(item => item.jenis_transaksi === 'pengeluaran');
-
-    const totalPendapatan = pemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-    const totalPengeluaran = pengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-    const totalPenjualan = totalPendapatan - totalPengeluaran;
-
-    setSummary({
-      totalPendapatan,
-      totalPengeluaran,
-      totalPenjualan
-    });
-  }, [filteredData]);
-
-  useEffect(() => {
-    // Calculate monthly summary from current month's data
-    const monthlyPemasukan = auditData.filter(item => item.jenis_transaksi === 'penjualan' && isInCurrentMonth(item.tanggal));
-    const monthlyPengeluaran = auditData.filter(item => item.jenis_transaksi === 'pengeluaran' && isInCurrentMonth(item.tanggal));
-
-    const totalPendapatan = monthlyPemasukan.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-    const totalPengeluaran = monthlyPengeluaran.reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
-    const totalPenjualan = totalPendapatan - totalPengeluaran;
-
-    setMonthlySummary({
-      totalPendapatan,
-      totalPengeluaran,
-      totalPenjualan
-    });
-  }, [auditData]);
-
-  useEffect(() => {
-    if (auditData.length > 0) {
-      const penjualanData = auditData.filter(item => item.jenis_transaksi === 'penjualan');
-
-      // Process weekly data for bar chart (jumlah terjual per produk per minggu) - based on current month
-      const weeks = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]; // [kerupuk, pangsit, stick] per minggu
-      penjualanData.forEach(item => {
-        if (isInCurrentMonth(item.tanggal)) {
-          const week = getWeek(item.tanggal);
-          if (week !== -1) {
-            if (item.produk?.nama_produk?.toLowerCase().includes("kerupuk")) {
-              weeks[week][0] += item.jumlah;
-            } else if (item.produk?.nama_produk?.toLowerCase().includes("pangsit")) {
-              weeks[week][1] += item.jumlah;
-            } else if (item.produk?.nama_produk?.toLowerCase().includes("stik")) {
-              weeks[week][2] += item.jumlah;
-            }
-          }
-        }
-      });
-
-      // Calculate max total per week for stacked bars
-      const weekTotals = weeks.map(week => week.reduce((sum, q) => sum + q, 0));
-      const rawMax = Math.max(...weekTotals) + 5;
-      const maxQuantity = Math.ceil(rawMax / 10) * 10; // Sesuaikan skala untuk jumlah (kelipatan 10)
-      const yAxisLabels = [];
-      for (let i = 0; i <= maxQuantity; i += Math.max(1, Math.floor(maxQuantity / 5))) {
-        yAxisLabels.push(i);
-      }
-      if (yAxisLabels[yAxisLabels.length - 1] !== maxQuantity) {
-        yAxisLabels.push(maxQuantity);
-      }
-
-      // Calculate total quantity and percentages for pie chart (based on current week)
-      const currentWeekPenjualan = penjualanData.filter(item => isInCurrentWeek(item.tanggal));
-      const totalQuantity = currentWeekPenjualan.reduce((sum, item) => sum + item.jumlah, 0);
-      const kerupukTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("kerupuk")).reduce((sum, item) => sum + item.jumlah, 0);
-      const pangsitTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("pangsit")).reduce((sum, item) => sum + item.jumlah, 0);
-      const stickTotal = currentWeekPenjualan.filter(item => item.produk?.nama_produk?.toLowerCase().includes("stik")).reduce((sum, item) => sum + item.jumlah, 0);
-
-      const percentages = totalQuantity > 0 ? [
-        (kerupukTotal / totalQuantity) * 100,
-        (pangsitTotal / totalQuantity) * 100,
-        (stickTotal / totalQuantity) * 100
-      ] : [0, 0, 0];
-
-      // Build conic gradient string
-      const gradient = `conic-gradient(#4CAF50 0% ${percentages[0]}%, #2196F3 ${percentages[0]}% ${percentages[0] + percentages[1]}%, #FF9800 ${percentages[0] + percentages[1]}% 100%)`;
-
-      // Legend items with dynamic percentages
-      const legendItems = [
-        { label: 'Kerupuk', color: 'bg-green-500', value: `${percentages[0].toFixed(1)}%` },
-        { label: 'Pangsit', color: 'bg-blue-500', value: `${percentages[1].toFixed(1)}%` },
-        { label: 'Stick', color: 'bg-orange-500', value: `${percentages[2].toFixed(1)}%` }
-      ];
-
-      setChartData({
-        weeklyData: weeks,
-        maxQuantity,
-        yAxisLabels,
-        totalQuantity,
-        percentages,
-        gradient,
-        legendItems
-      });
-    }
-  }, [auditData]);
-
-  const fetchAuditData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await api.get("/audit", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = res.data.data;
-      setAuditData(data);
-    } catch (error) {
-      console.error("Error fetching audit data:", error);
-    }
-  };
-
-  const fetchProdukData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await api.get("/produk", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProdukData(res.data);
-    } catch (error) {
-      console.error("Error fetching produk data:", error);
-    }
-  };
-
-  const filterData = () => {
-    let filtered = auditData; // Tampilkan semua data audit (penjualan dan pengeluaran)
-
-    // Filter to show only current month's data
-    filtered = filtered.filter(item => isInCurrentMonth(item.tanggal));
-
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.produk?.nama_produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.keterangan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.jenis_transaksi?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Group penjualan by product name
-    const penjualanGrouped = {};
-    filtered.filter(item => item.jenis_transaksi === 'penjualan').forEach(item => {
-      const key = item.produk?.nama_produk || 'N/A';
-      if (!penjualanGrouped[key]) {
-        penjualanGrouped[key] = {
-          jenis_transaksi: 'penjualan',
-          produk: { nama_produk: key },
-          harga_satuan: item.harga_satuan,
-          jumlah: 0,
-          total_pendapatan: 0,
-          tanggal: item.tanggal,
-          isGrouped: true
-        };
-      }
-      penjualanGrouped[key].jumlah += item.jumlah;
-      penjualanGrouped[key].total_pendapatan += Number(item.total_pendapatan) || 0;
-      if (new Date(item.tanggal) > new Date(penjualanGrouped[key].tanggal)) {
-        penjualanGrouped[key].tanggal = item.tanggal;
-        penjualanGrouped[key].harga_satuan = item.harga_satuan; // Update to latest price
-      }
-    });
-
-    const pengeluaran = filtered.filter(item => item.jenis_transaksi === 'pengeluaran');
-    const groupedData = [...Object.values(penjualanGrouped), ...pengeluaran];
-
-    setFilteredData(groupedData);
-  };
-
+  // --- FORMATTERS ---
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
+      style: 'currency', currency: 'IDR', minimumFractionDigits: 0
     }).format(amount);
   };
-
+  
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
+  // --- FETCH DATA ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        
+        // 1. Get User
+        const userRes = await api.get("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+        setUser(userRes.data);
+
+        // 2. Get Audit Data
+        const auditRes = await api.get("/audit", { headers: { Authorization: `Bearer ${token}` } });
+        setAuditData(auditRes.data.data);
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        localStorage.removeItem("token");
+        navigate("/"); 
+      }
+    };
+    fetchData();
+  }, [navigate]);
+
+  // --- PROCESS DATA ---
+  useEffect(() => {
+    if (auditData.length > 0) {
+      processDashboardData();
+      filterTableData();
+    }
+  }, [auditData]);
+
+  useEffect(() => {
+    filterTableData();
+  }, [searchTerm]);
+
+
+  // --- LOGIKA UTAMA ---
+  const processDashboardData = () => {
+    // 1. Tentukan Tanggal Patokan (Data Terakhir)
+    const sortedData = [...auditData].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+    const latestDate = new Date(sortedData[0].tanggal);
+
+    // 2. Tentukan Range Minggu Ini
+    const startOfWeek = new Date(latestDate);
+    const day = startOfWeek.getDay() || 7; 
+    if (day !== 1) startOfWeek.setDate(startOfWeek.getDate() - (day - 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // 3. Tentukan Range Minggu Lalu (Untuk Tren)
+    const startOfPrevWeek = new Date(startOfWeek);
+    startOfPrevWeek.setDate(startOfPrevWeek.getDate() - 7);
+    const endOfPrevWeek = new Date(endOfWeek);
+    endOfPrevWeek.setDate(endOfPrevWeek.getDate() - 7);
+
+    // --- A. SCORE CARD (MINGGU INI vs MINGGU LALU) ---
+    
+    // Filter Data Minggu Ini
+    const thisWeekData = auditData.filter(item => {
+        const d = new Date(item.tanggal);
+        return d >= startOfWeek && d <= endOfWeek;
+    });
+
+    // Filter Data Minggu Lalu
+    const prevWeekData = auditData.filter(item => {
+        const d = new Date(item.tanggal);
+        return d >= startOfPrevWeek && d <= endOfPrevWeek;
+    });
+
+    // Fungsi Helper Hitung Total
+    const calcTotal = (data, type) => {
+        return data.filter(item => {
+            const t = item.jenis_transaksi ? item.jenis_transaksi.toLowerCase() : '';
+            if (type === 'pemasukan') return t === 'pemasukan' || t === 'penjualan';
+            if (type === 'pengeluaran') return t === 'pengeluaran' || item.produk_id === null;
+            return false;
+        }).reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+    };
+
+    // Hitung Nilai Minggu Ini
+    const currPendapatan = calcTotal(thisWeekData, 'pemasukan');
+    const currPengeluaran = calcTotal(thisWeekData, 'pengeluaran');
+    const currProfit = currPendapatan - currPengeluaran;
+
+    // Hitung Nilai Minggu Lalu
+    const prevPendapatan = calcTotal(prevWeekData, 'pemasukan');
+    const prevPengeluaran = calcTotal(prevWeekData, 'pengeluaran');
+    const prevProfit = prevPendapatan - prevPengeluaran;
+
+    // Fungsi helper kecil untuk format dd mmmm yyyy
+    const formatHeaderDate = (date) => {
+        return date.toLocaleDateString('id-ID', { 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+        });
+    };
+
+    const startStr = formatHeaderDate(startOfWeek);
+    const endStr = formatHeaderDate(endOfWeek);
+
+    setSummary({
+      totalPendapatan: currPendapatan,
+      diffPendapatan: currPendapatan - prevPendapatan, // Selisih
+      totalPengeluaran: currPengeluaran,
+      diffPengeluaran: currPengeluaran - prevPengeluaran, // Selisih
+      totalProfit: currProfit,
+      diffProfit: currProfit - prevProfit, // Selisih
+      mingguData: `${startStr} - ${endStr}`
+    });
+
+    // --- B. PIE CHART (4 MINGGU TERAKHIR - PERSENTASE PRODUK) ---
+    
+    // Tentukan tanggal mulai 4 minggu yang lalu (sama seperti Bar Chart)
+    const startOf4Weeks = new Date(startOfWeek);
+    startOf4Weeks.setDate(startOf4Weeks.getDate() - (3 * 7)); // Mundur 3 minggu + minggu ini = 4 minggu
+    startOf4Weeks.setHours(0, 0, 0, 0);
+
+    // Filter data penjualan selama 4 minggu terakhir
+    const sales4Weeks = auditData.filter(item => {
+      const d = new Date(item.tanggal);
+      return d >= startOf4Weeks && d <= endOfWeek && 
+             (item.jenis_transaksi.toLowerCase() === 'pemasukan' || item.jenis_transaksi.toLowerCase() === 'penjualan');
+    });
+
+    const productStats = {};
+    sales4Weeks.forEach(item => {
+      const pName = item.produk?.nama_produk || 'Lainnya';
+      productStats[pName] = (productStats[pName] || 0) + item.jumlah;
+    });
+
+    // Siapkan warna
+    const bgColors = {
+        'Kerupuk Kulit': '#4CAF50', 
+        'Stik Bawang': '#FF9800',   
+        'Keripik Bawang': '#2196F3',
+        'Lainnya': '#9E9E9E'
+    };
+
+    const labels = Object.keys(productStats);
+    const dataPie = Object.values(productStats);
+    const colors = labels.map(label => bgColors[label] || '#607D8B');
+
+    setPieData({
+      labels: labels,
+      datasets: [{
+        data: dataPie,
+        backgroundColor: colors,
+        borderWidth: 1,
+      }]
+    });
+
+    // --- C. BAR CHART (4 MINGGU TERAKHIR) ---
+    const weeksLabels = [];
+    const productList = ['Kerupuk Kulit', 'Stik Bawang', 'Keripik Bawang'];
+    const weeklyData = {};
+    productList.forEach(p => weeklyData[p] = [0, 0, 0, 0]);
+
+    // Loop 4 minggu ke belakang (i=3 -> 0)
+    // i=0: Audit Minggu Ini (Data Paling Baru)
+    // i=3: Audit 4 Minggu Lalu
+    for (let i = 3; i >= 0; i--) {
+       
+       // 1. TENTUKAN RENTANG PENCARIAN DATA (Berdasarkan Tanggal Audit)
+       const searchStart = new Date(startOfWeek);
+       searchStart.setDate(startOfWeek.getDate() - (i * 7)); // Mundur i minggu
+       
+       const searchEnd = new Date(searchStart);
+       searchEnd.setDate(searchStart.getDate() + 6);
+       searchEnd.setHours(23, 59, 59);
+
+       // 2. TENTUKAN LABEL TAMPILAN (Berdasarkan Periode Penjualan Asli)
+       // Data yang diaudit tanggal 17 Nov adalah penjualan tanggal 10-16 Nov.
+       // Jadi labelnya harus mundur 7 hari dari tanggal audit.
+       const labelStart = new Date(searchStart);
+       labelStart.setDate(labelStart.getDate() - 7); // Mundur 1 minggu
+       
+       const labelEnd = new Date(labelStart);
+       labelEnd.setDate(labelEnd.getDate() + 6); // Sampai minggu depannya
+
+       // --- Format Tanggal (dd/mm/yy) ---
+       const formatShort = (date) => {
+           const d = date.getDate().toString().padStart(2, '0');
+           const m = (date.getMonth() + 1).toString().padStart(2, '0');
+           const y = date.getFullYear().toString().slice(-2); 
+           return `${d}/${m}/${y}`;
+       };
+
+       const startStr = formatShort(labelStart);
+       const endStr = formatShort(labelEnd);
+       
+       // Push Label (Minggu 4 = Minggu Audit Terakhir)
+       weeksLabels.push([`Minggu ${4-i}`, `(${startStr} - ${endStr})`]);
+
+       // 3. FILTER DATA (Gunakan searchStart & searchEnd)
+       const weekData = auditData.filter(item => {
+          const d = new Date(item.tanggal);
+          return d >= searchStart && d <= searchEnd && 
+             (item.jenis_transaksi.toLowerCase() === 'pemasukan' || item.jenis_transaksi.toLowerCase() === 'penjualan');
+       });
+
+       // Sum per produk
+       weekData.forEach(item => {
+          const pName = item.produk?.nama_produk;
+          if (weeklyData[pName]) {
+             weeklyData[pName][3 - i] += item.jumlah; 
+          }
+       });
+    }
+
+    setBarData({
+      labels: weeksLabels,
+      datasets: [
+        { label: 'Kerupuk Kulit', data: weeklyData['Kerupuk Kulit'], backgroundColor: '#4CAF50' },
+        { label: 'Stik Bawang', data: weeklyData['Stik Bawang'], backgroundColor: '#FF9800' },
+        { label: 'Keripik Bawang', data: weeklyData['Keripik Bawang'], backgroundColor: '#2196F3' },
+      ]
+    });
+  };
+
+  // --- FILTER DATA TABEL ---
+  const filterTableData = () => {
+      const filtered = auditData.filter(item => {
+          const pName = item.produk?.nama_produk || '';
+          const sumber = item.sumber_pengeluaran || '';
+          const combinedSearch = (pName + sumber + item.jenis_transaksi).toLowerCase();
+          return combinedSearch.includes(searchTerm.toLowerCase());
+      });
+      filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+      setFilteredTableData(filtered);
+  };
+
+  // --- KOMPONEN SUMMARY CARD (DENGAN TREN) ---
+  const SummaryCard = ({ title, value, diff, icon, baseColor, borderColor, forceRed }) => {
+    const isPositive = diff > 0;
+    const isNegative = diff < 0;
+    const isNeutral = diff === 0;
+
+    let badgeClass = "text-gray-500 bg-gray-100";
+    if (isPositive) badgeClass = "text-green-700 bg-green-100";
+    else if (isNegative) badgeClass = "text-red-700 bg-red-100";
+    if (forceRed && !isNeutral) badgeClass = "text-red-700 bg-red-100";
+
+    let sign = "";
+    let iconTrend = null;
+    if (isPositive) {
+        sign = "+";
+        iconTrend = <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>;
+    } else if (isNegative) {
+        sign = "-";
+        iconTrend = <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>;
+    }
+
+    // GUNAKAN borderColor DI SINI
+    return (
+      <div className={`bg-white rounded-xl shadow-sm p-6 border-l-4 ${borderColor} flex items-center justify-between hover:shadow-md transition w-full md:w-[30%]`}>
+         <div>
+            <p className={`text-sm font-semibold ${baseColor}`}>{title}</p>
+            <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(value)}</h3>
+            
+            <div className={`inline-flex items-center gap-1 text-[10px] font-bold mt-2 px-2 py-0.5 rounded-full ${badgeClass}`}>
+                <span>{sign}{formatCurrency(Math.abs(diff))}</span>
+                {iconTrend}
+                {isNeutral && <span>Stabil</span>}
+            </div>
+         </div>
+         
+         {/* Background Icon juga kita hardcode atau perbaiki agar aman */}
+         <div className={`p-3 rounded-full ${
+            baseColor.includes('green') ? 'bg-green-100' : 
+            baseColor.includes('red') ? 'bg-red-100' : 'bg-blue-100'
+         }`}>
+            <img src={icon} alt="Icon" className="w-6 h-6" />
+         </div>
+      </div>
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-100 font-poppins pb-20">
-      {/* Welcome Section */}
-      <div className="pt-4 flex justify-center items-center text-center gap-3">
+      <Navbar username={user ? user.username : "User"} />
+
+      {/* --- Header --- */}
+      <div className="pt-6 pb-4 flex justify-center items-center text-center gap-3">
         <img src={garis} alt="" className="w-[30%]" />
-        <h1 className="text-2xl font-bold text-red-900 m-2">
-          Selamat Datang, {user ? user.username.toUpperCase() : "KEMBAR BAROKAH"}
-        </h1>
+        <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-900 tracking-wide">SELAMAT DATANG</h1>
+            <h2 className="text-lg font-bold text-[#D8A400] mt-1">UMKM KEMBAR BAROKAH</h2>
+            {summary.mingguData && (
+                <p className="text-xs text-gray-500 mt-1 font-medium bg-white px-3 py-1 rounded-full shadow-sm inline-block">
+                    Data Audit Minggu: {summary.mingguData}
+                </p>
+            )}
+        </div>
         <img src={garis} alt="" className="w-[30%]" />
       </div>
 
-      {/* Card Section */}
-      <div className="mt-5 flex justify-center gap-8 flex-wrap">
-        {[
-          { title: "Total Pendapatan (Bulan)", color: "text-green-600", value: formatCurrency(monthlySummary.totalPendapatan), icon: pemasukan },
-          { title: "Total Pengeluaran (Bulan)", color: "text-red-600", value: formatCurrency(monthlySummary.totalPengeluaran), icon: pengeluaran },
-          { title: "Total Penjualan (Bulan)", color: "text-blue-500", value: formatCurrency(monthlySummary.totalPenjualan), icon: profit },
-        ].map((card, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-4 bg-white shadow-md hover:shadow-lg transition rounded-xl p-4 w-72"
-          >
-            <img src={card.icon} alt="" className="w-10" />
-            <div>
-              <p className={`text-sm font-semibold ${card.color}`}>{card.title}</p>
-              <h2 className="text-lg font-bold text-gray-800">{card.value}</h2>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Grafik Section */}
-      <div className="mt-5 bg-white p-6 rounded-2xl flex flex-col md:flex-row justify-center items-start gap-6 px-4 w-[90%] md:w-[70%] mx-auto">
-        {/* Pie Chart */}
-        <div className="bg-gray-100 p-6 rounded-2xl shadow-md w-full md:w-[40%] flex flex-col items-center">
-          <h3 className="text-xl font-semibold mb-4 text-gray-800">Persentase Penjualan</h3>
-          <div
-            className="w-48 h-48 rounded-full shadow-inner border border-gray-200"
-            style={{ background: chartData.gradient }}
-          ></div>
-          <p className="mt-3 text-gray-600 font-medium">Total 100%</p>
-          <div className="mt-5 space-y-2">
-            {chartData.legendItems.map((item, i) => (
-              <div key={i} className="flex items-center justify-between w-44 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className={`w-3.5 h-3.5 rounded-full ${item.color}`}></span>
-                  <span className="text-gray-700">{item.label}</span>
-                </div>
-                <span className="font-semibold text-gray-800">{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bar Chart */}
-        <div className="bg-gray-100 p-6 rounded-2xl shadow-md w-full md:w-[55%]">
-          <h3 className="text-xl font-semibold mb-6 text-center text-gray-800">
-            Grafik Penjualan per Minggu
-          </h3>
-          <div className="relative h-64">
-            <div className="relative h-64 flex items-end px-8">
-              {/* Sumbu Y */}
-              <div className="flex flex-col justify-between text-xs text-gray-500 h-full w-8 text-right">
-                {chartData.yAxisLabels
-                  .slice()
-                  .reverse()
-                  .map((label, i) => (
-                    <span key={i}>{label}</span>
-                  ))}
-              </div>
-
-              {/* Area Grafik */}
-              <div className="flex justify-around items-end flex-1 h-full ml-4 relative">
-                {/* Garis horizontal bantu (gridlines) */}
-                {chartData.yAxisLabels.map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute left-0 right-0 border-t border-gray-200"
-                    style={{ bottom: `${(i / (chartData.yAxisLabels.length - 1)) * 100}%` }}
-                  ></div>
-                ))}
-
-                {/* Batang-batang per minggu */}
-                {chartData.weeklyData.map((weekData, weekIndex) => (
-                  <div key={weekIndex} className="flex flex-col items-center z-10">
-                    <div className="flex items-end">
-                      {weekData.map((quantity, productIndex) => (
-                        <div
-                          key={productIndex}
-                          style={{ height: `${(quantity / chartData.maxQuantity) * 256}px` }}
-                          className={`w-6 rounded-t-lg ${
-                            productIndex === 0 ? 'bg-green-500' : productIndex === 1 ? 'bg-blue-500' : 'bg-orange-500'
-                          }`}
-                        ></div>
-                      ))}
-                    </div>
-                    <span className="text-xs text-gray-600 mt-1 font-medium">
-                      Minggu {weekIndex + 1}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Garis dasar X */}
-            <div className="absolute bottom-6 left-8 right-8 h-[1px] bg-gray-300"></div>
-          </div>
-          {/* Legend */}
-          <div className="flex justify-center mt-4 gap-4">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-green-500 rounded"></span>
-              <span className="text-sm text-gray-700">Kerupuk</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-blue-500 rounded"></span>
-              <span className="text-sm text-gray-700">Pangsit</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-orange-500 rounded"></span>
-              <span className="text-sm text-gray-700">Stick</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      {/* Table Section */}
-      <div className="flex flex-col bg-white p-6 rounded-xl shadow-md mt-8 mx-auto w-[90%] md:w-[70%]">
-        <div className="flex justify-between items-center mb-8 w-[100%]">
-          <div className="relative w-full">
-            <input
-              type="text"
-              placeholder="Cari produk, jenis transaksi..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border border-gray-300 rounded-full px-4 py-2 pr-10 w-full shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+      <div className="max-w-7xl mx-auto px-4 pb-12">
+        
+        {/* --- Score Cards (DENGAN TREN) --- */}
+        <div className="flex flex-col md:flex-row justify-center gap-6 mt-4">
+            <SummaryCard 
+                title="Total Pendapatan" 
+                value={summary.totalPendapatan} 
+                diff={summary.diffPendapatan}
+                icon={pemasukanIcon} 
+                baseColor="text-green-600" 
+                borderColor="border-green-500"
             />
-            <button
-              className="absolute right-0 top-0 h-full w-16 px-3 bg-black rounded-full flex items-center justify-center"
-            >
-              <img
-                src={searchIcon}
-                alt="Search"
-                className="w-5 h-5"
-              />
-            </button>
-          </div>
+            <SummaryCard 
+                title="Total Pengeluaran" 
+                value={summary.totalPengeluaran} 
+                diff={summary.diffPengeluaran}
+                icon={pengeluaranIcon} 
+                baseColor="text-red-600" 
+                borderColor="border-red-500"
+                forceRed={true} // Pengeluaran selalu merah
+            />
+            <SummaryCard 
+                title="Profit Penjualan" 
+                value={summary.totalProfit} 
+                diff={summary.diffProfit}
+                icon={profitIcon} 
+                baseColor="text-blue-600" 
+                borderColor="border-blue-500"
+            />
         </div>
 
-        <table className="w-full text-sm text-center border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              {["No", "Jenis", "Sumber", "Harga", "Jumlah", "DateTime", "Total"].map((h, i) => (
-                <th key={i} className="py-2 px-3 font-semibold text-gray-700 border-b">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((item, i) => (
-              <tr key={i} className="hover:bg-gray-50 border-b">
-                <td className="py-2 px-3">{i + 1}</td>
-                <td className="py-2 px-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.jenis_transaksi === 'penjualan'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {item.jenis_transaksi === 'penjualan' ? 'Pemasukan' : 'Pengeluaran'}
-                  </span>
-                </td>
-                <td className="py-2 px-3">{item.jenis_transaksi === 'penjualan' ? (item.produk?.nama_produk || 'N/A') : (item.keterangan || 'N/A')}</td>
-                <td className="py-2 px-3">{formatCurrency(item.harga_satuan || 0)}</td>
-                {/* <td className="py-2 px-3">{item.produk?.unit || 'N/A'}</td> */}
-                <td className="py-2 px-3">{item.jumlah}</td>
-                <td className="py-2 px-3">{formatDate(item.tanggal)}</td>
-                <td className="py-2 px-3">{formatCurrency(item.total_pendapatan)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* --- Charts Section --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+            
+            {/* Pie Chart */}
+            <div className="bg-white p-6 rounded-xl shadow-md lg:col-span-1 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 text-center border-b pb-2">Persentase Penjualan</h3>
+                <div className="flex-1 relative min-h-[250px]">
+                    {pieData ? <PieChart data={pieData} /> : <p className="text-center text-gray-400 mt-10">Loading...</p>}
+                </div>
+                <div className="mt-6 flex items-start justify-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-medium text-gray-700">
+                        Proporsi produk terjual dalam akumulasi <span className="font-bold text-blue-600">4 minggu terakhir</span>.
+                    </p>
+                </div>
+            </div>
+
+            {/* Bar Chart */}
+            <div className="bg-white p-6 rounded-xl shadow-md lg:col-span-2 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Grafik Penjualan (4 Minggu Terakhir)</h3>
+                <div className="flex-1 relative min-h-[300px]">
+                    {barData ? <BarChart data={barData} /> : <p className="text-center text-gray-400 mt-10">Loading...</p>}
+                </div>
+            </div>
+
+        </div>
+
+        {/* --- Table Section --- */}
+        <div className="flex flex-col bg-white p-6 rounded-xl shadow-md mt-8 w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Riwayat Transaksi Terakhir</h3>
+              <div className="relative w-full max-w-md">
+                <input
+                  type="text"
+                  placeholder="Cari Data..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border border-gray-300 rounded-full px-4 py-2 pr-12 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button className="absolute right-0 top-0 h-full w-10 bg-gray-800 rounded-r-full flex items-center justify-center hover:bg-gray-700 transition">
+                  <img src={searchIcon} alt="Search" className="w-4 h-4 invert brightness-0 invert" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto overflow-y-auto max-h-[400px] border rounded-lg">
+              <table className="w-full text-sm text-center border-collapse relative">
+                <thead className="sticky top-0 z-10 bg-gray-100 text-gray-600 uppercase text-xs tracking-wide shadow-sm">
+                  <tr>
+                    {["No", "Jenis", "Sumber/Produk", "Harga", "Jml", "Tanggal", "Total"].map((h, i) => (
+                        <th key={i} className="py-3 px-4 font-semibold border-b">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="text-gray-700">
+                  {filteredTableData.slice(0, 20).map((item, i) => (
+                    <tr key={i} className="hover:bg-gray-50 border-b last:border-0 transition-colors">
+                      <td className="py-3 px-4">{i + 1}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            item.jenis_transaksi.toLowerCase() === 'penjualan' || item.jenis_transaksi.toLowerCase() === 'pemasukan'
+                            ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                            {item.jenis_transaksi.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-800 text-left">
+                        {item.produk ? item.produk.nama_produk : (item.sumber_pengeluaran || '-')}
+                      </td>
+                      <td className="py-3 px-4">{formatCurrency(item.harga_satuan || 0)}</td>
+                      <td className="py-3 px-4 font-bold">{item.jumlah}</td>
+                      <td className="py-3 px-4 whitespace-nowrap text-xs">{formatDate(item.tanggal)}</td>
+                      <td className={`py-3 px-4 font-semibold ${
+                          item.jenis_transaksi.toLowerCase() === 'penjualan' || item.jenis_transaksi.toLowerCase() === 'pemasukan'
+                          ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {formatCurrency(item.total_pendapatan)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredTableData.length === 0 && (
+                <div className="text-center py-8 text-gray-500">Data tidak ditemukan</div>
+              )}
+            </div>
+        </div>
+
       </div>
     </div>
   );
