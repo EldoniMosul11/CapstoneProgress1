@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth.js";
 import produkRoutes from "./routes/produk.js";
 import auditRoutes from "./routes/audit.js";
+import customerRoutes from "./routes/customer.js";
 import dotenv from "dotenv";
 import path from "path";
 
@@ -18,6 +19,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/produk", produkRoutes);
 app.use("/api/audit", auditRoutes);
+app.use("/api/customer", customerRoutes);
 
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));
 

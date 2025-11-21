@@ -17,6 +17,8 @@ import InputPengeluaran from "./pages/inputPengeluaran";
 import EditPemasukan from "./pages/editPemasukan";
 import EditPengeluaran from "./pages/editPengeluaran";
 import DashboardPrediksi from "./pages/dashboardPrediksi";
+import EditCustomer from "./pages/editCustomer";
+import AddCustomer from "./pages/addCustomer";
 
 function AppContent() {
   const [user, setUser] = useState(null);
@@ -59,6 +61,8 @@ function AppContent() {
           <Route path="/audit/edit/:id" element={<EditPemasukan />} />
           <Route path="/audit/edit-pengeluaran/:id" element={<EditPengeluaran />} />
           <Route path="/dashboardprediksi" element={<DashboardPrediksi />} />
+          <Route path="/produk/add-customer/:produk_id" element={<AddCustomer />} />
+          <Route path="/produk/customer/edit/:id" element={<EditCustomer />} />
         </Routes>
       </div>
     </>

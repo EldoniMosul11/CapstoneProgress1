@@ -30,7 +30,7 @@ const customersData = [
 export default function DetailProduk() {
   const [user, setUser] = useState(null);
   const [produk, setProduk] = useState(initialProdukData);
-  const [customers, setCustomers] = useState(customersData); // Langsung set data dummy
+  const [customers, setCustomers] = useState([]); // Will be fetched from API
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -74,12 +74,23 @@ export default function DetailProduk() {
       }
     };
 
+    const fetchCustomers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await api.get(`/customer/produk/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCustomers(res.data);
+      } catch (err) {
+        console.error("Error fetching customers:", err);
+        setCustomers([]);
+      }
+    };
+
     if (id) {
       fetchProduk();
+      fetchCustomers();
     }
-    
-    // (Bagian fetchCustomers API di-skip dulu karena pakai dummy)
-    // setCustomers(customersData);
 
   }, [navigate, id]);
 
@@ -89,8 +100,7 @@ export default function DetailProduk() {
   };
 
   const handleAddCostumer = () => {
-    // navigate(`/produk/add-costumer`);
-    alert("Fitur Add Customer belum tersedia (Demo)");
+    navigate(`/produk/add-customer/${id}`);
   };
 
   const handleMapsClick = (url) => {
@@ -98,13 +108,22 @@ export default function DetailProduk() {
   };
 
   const handleEditCustomer = (customerId) => {
-    // navigate(`/produk/customer/edit/${customerId}`);
-    alert("Fitur Edit Customer belum tersedia (Demo)");
+    navigate(`/produk/customer/edit/${customerId}`);
   };
 
-  const handleDeleteCustomer = (customerId) => {
+  const handleDeleteCustomer = async (customerId) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus customer ini?")) {
-      setCustomers(customers.filter(customer => customer.id !== customerId));
+      try {
+        const token = localStorage.getItem("token");
+        await api.delete(`/customer/${customerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCustomers(customers.filter(customer => customer.id !== customerId));
+        alert("Customer berhasil dihapus!");
+      } catch (err) {
+        console.error("Error deleting customer:", err);
+        alert("Gagal menghapus customer. Silakan coba lagi.");
+      }
     }
   };
 
@@ -203,7 +222,7 @@ export default function DetailProduk() {
                     <td className="py-3 px-4 font-medium text-gray-800 text-left">{customer.nama}</td>
                     <td className="py-3 px-4">
                         <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                            {customer.produk}
+                            {produk.name}
                         </span>
                     </td>
                     <td className="py-3 px-4 text-center">
