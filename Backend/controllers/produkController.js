@@ -91,17 +91,17 @@ export const updateProduk = (req, res) => {
   const { namaProduk, detailProduk, hargaSatuan, stokTersedia } = req.body;
   const gambar = req.file ? req.file.filename : null;
 
-  if (!namaProduk) { 
+  if (!namaProduk) {
       return res.status(400).json({ message: "Nama produk wajib diisi" });
   }
 
   let sql, values;
   if (gambar) {
     sql = "UPDATE produk SET nama_produk = ?, detail_produk = ?, harga_satuan = ?, stok_tersedia = ?, gambar = ? WHERE id = ?";
-    values = [namaProduk, detailProduk, hargaSatuan || null, stokTersedia || null, gambar, id];
+    values = [namaProduk, detailProduk, parseInt(hargaSatuan) || null, parseInt(stokTersedia) || null, gambar, id];
   } else {
     sql = "UPDATE produk SET nama_produk = ?, detail_produk = ?, harga_satuan = ?, stok_tersedia = ? WHERE id = ?";
-    values = [namaProduk, detailProduk, hargaSatuan || null, stokTersedia || null, id];
+    values = [namaProduk, detailProduk, parseInt(hargaSatuan) || null, parseInt(stokTersedia) || null, id];
   }
 
   db.query(sql, values, (err, result) => {

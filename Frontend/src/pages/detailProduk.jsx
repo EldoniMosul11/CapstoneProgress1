@@ -6,6 +6,7 @@ import kosong from "../assets/kosong.png";
 import garis from "../assets/garis.svg";
 import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete.svg";
+import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
 // Data dummy fallback
 const initialProdukData = {
@@ -112,19 +113,22 @@ export default function DetailProduk() {
   };
 
   const handleDeleteCustomer = async (customerId) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus customer ini?")) {
-      try {
-        const token = localStorage.getItem("token");
-        await api.delete(`/customer/${customerId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCustomers(customers.filter(customer => customer.id !== customerId));
-        alert("Customer berhasil dihapus!");
-      } catch (err) {
-        console.error("Error deleting customer:", err);
-        alert("Gagal menghapus customer. Silakan coba lagi.");
+    showConfirmToast(
+      "Apakah Anda yakin ingin menghapus customer ini?",
+      async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await api.delete(`/customer/${customerId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setCustomers(customers.filter(customer => customer.id !== customerId));
+          showSuccessToast("Customer berhasil dihapus!");
+        } catch (err) {
+          console.error("Error deleting customer:", err);
+          showErrorToast("Gagal menghapus customer. Silakan coba lagi.");
+        }
       }
-    }
+    );
   };
 
   return (

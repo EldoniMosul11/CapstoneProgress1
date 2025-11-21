@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { showErrorToast } from "../components/Toast";
 import logo from "../assets/logo.png"; // pastikan kamu punya file ini di src/assets/logo.png
 import ceklis from "../assets/ceklis.svg"; // ikon tombol login
 
@@ -16,7 +17,7 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       navigate("/dashboard");
     } catch (err) {
-      alert("Login gagal!");
+      showErrorToast("Login gagal!");
       console.error(err.response?.data || err.message);
       // Clear any existing token on login failure
       localStorage.removeItem("token");

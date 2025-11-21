@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import garis from "../assets/garis.svg";
 import api from "../api";
 import kosong from "../assets/kosong.png";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 // Kosongkan data produk awal
 const initialProdukData = {
@@ -18,12 +19,7 @@ const initialProdukData = {
   unit: "Pcs"
 };
 
-// 1. HELPER FORMATTER (Di luar komponen)
-const formatRibuan = (angka) => {
-  if (!angka) return "";
-  const raw = angka.toString().replace(/\D/g, "");
-  return new Intl.NumberFormat("id-ID").format(raw);
-};
+// Helper function removed - using number input instead
 
 export default function EditProduk() {
   const [user, setUser] = useState(null);
@@ -63,8 +59,7 @@ export default function EditProduk() {
           productionDate: "",
           productionQuantity: "",
           stock: res.data.stok_tersedia,
-          // 2. FORMAT SAAT LOAD DATA (DB -> UI)
-          price: res.data.harga_satuan ? formatRibuan(res.data.harga_satuan) : "",
+          price: res.data.harga_satuan || "",
           unit: res.data.unit || "Pcs"
         };
         setProduk(transformedProduk);
@@ -102,7 +97,7 @@ export default function EditProduk() {
     e.preventDefault();
     
     if (!produk.name) {
-        alert("Nama Produk wajib diisi!");
+        showErrorToast("Nama Produk wajib diisi!");
         return;
     }
 
@@ -119,10 +114,8 @@ export default function EditProduk() {
       formData.append("namaProduk", produk.name);
       formData.append("detailProduk", produk.description || "");
       
-      // 3. BERSIHKAN FORMAT SEBELUM KIRIM (UI -> DB)
-      // Ubah "7.500" jadi "7500"
-      const cleanPrice = produk.price.toString().replace(/\D/g, '');
-      formData.append("hargaSatuan", cleanPrice);
+      // Send price as is (already a number)
+      formData.append("hargaSatuan", produk.price);
       
       formData.append("stokTersedia", newTotalStock); 
       formData.append("unit", produk.unit); 
@@ -143,13 +136,13 @@ export default function EditProduk() {
       if (additionalStock > 0) {
           successMsg += `\nStok bertambah: +${additionalStock}\nTotal Stok: ${newTotalStock}`;
       }
-      alert(successMsg);
+      showSuccessToast(successMsg);
       navigate(`/detailProduk/${id}`);
-      
+
     } catch (error) {
       console.error("Error updating produk:", error);
       const msg = error.response?.data?.message || "Terjadi kesalahan saat memperbarui produk";
-      alert(msg);
+      showErrorToast(msg);
     } finally {
       setIsLoading(false);
     }
@@ -223,23 +216,17 @@ export default function EditProduk() {
                   <input type="number" name="stock" value={produk.stock} readOnly className="w-full px-4 py-3 border border-gray-200 bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed" />
                 </div>
 
-                {/* --- 4. INPUT HARGA DENGAN FORMATTER --- */}
+                {/* --- 4. INPUT HARGA SEBAGAI NUMBER --- */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Harga Satuan</label>
                   <input
-                    type="text" // Tipe Text agar bisa menerima titik
+                    type="number"
                     name="price"
                     value={produk.price}
-                    onChange={(e) => {
-                      // Ambil input mentah
-                      const rawVal = e.target.value;
-                      // Format jadi ribuan (misal "7500" -> "7.500")
-                      const formatted = formatRibuan(rawVal);
-                      
-                      setProduk(prev => ({ ...prev, price: formatted }));
-                    }}
+                    onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Contoh: 7.500"
+                    placeholder="Masukkan harga satuan"
+                    min="0"
                   />
                 </div>
               </div>

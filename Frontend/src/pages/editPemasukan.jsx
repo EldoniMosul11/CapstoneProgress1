@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function EditPemasukan() {
   const [user, setUser] = useState(null);
@@ -69,7 +70,7 @@ export default function EditPemasukan() {
       }
     } catch (error) {
       console.error("Error fetching audit data:", error);
-      alert("Gagal memuat data audit");
+      showErrorToast("Gagal memuat data audit");
     }
   };
 
@@ -101,11 +102,11 @@ export default function EditPemasukan() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      alert("Data pemasukan berhasil diperbarui!");
+      showSuccessToast("Data pemasukan berhasil diperbarui!");
       navigate("/auditdata");
     } catch (error) {
       console.error("Error updating pemasukan:", error);
-      alert("Gagal memperbarui data pemasukan. Silakan coba lagi.");
+      showErrorToast("Gagal memperbarui data pemasukan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }

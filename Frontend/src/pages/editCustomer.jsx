@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function EditCustomer() {
   const [user, setUser] = useState(null);
@@ -43,7 +44,7 @@ export default function EditCustomer() {
         });
       } catch (err) {
         console.error("Error fetching customer:", err);
-        alert("Gagal memuat data customer.");
+        showErrorToast("Gagal memuat data customer.");
         navigate("/menu-produk");
       } finally {
         setIsFetching(false);
@@ -79,20 +80,20 @@ export default function EditCustomer() {
         }
       });
 
-      alert("Customer berhasil diupdate!");
-      navigate(`/detailProduk/${formData.produk_id}`);
+      showSuccessToast("Customer berhasil diupdate!");
+      setTimeout(() => {
+        navigate(`/detailProduk/${formData.produk_id}`);
+      }, 1500);
     } catch (error) {
       console.error("Error updating customer:", error);
-      alert("Gagal mengupdate customer. Silakan coba lagi.");
+      showErrorToast("Gagal mengupdate customer. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancel = () => {
-    if (window.confirm("Apakah Anda yakin ingin membatalkan? Perubahan tidak akan disimpan.")) {
-      navigate("/menu-produk");
-    }
+    navigate("/menu-produk");
   };
 
   if (isFetching) {

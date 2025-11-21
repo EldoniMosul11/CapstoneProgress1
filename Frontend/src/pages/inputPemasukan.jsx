@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function InputPemasukan() {
   const [user, setUser] = useState(null);
@@ -79,19 +80,19 @@ export default function InputPemasukan() {
       });
 
       // Sukses
-      alert("Data pemasukan berhasil ditambahkan!");
+      showSuccessToast("Data pemasukan berhasil ditambahkan!");
       navigate("/auditdata");
-      
+
     } catch (error) {
       console.error("Error adding pemasukan:", error);
-      
+
       // --- PERBAIKAN UTAMA: TANGKAP PESAN DARI BACKEND ---
       if (error.response && error.response.data && error.response.data.message) {
           // Tampilkan pesan spesifik (misal: "Stok tidak mencukupi...")
-          alert(`Gagal: ${error.response.data.message}`);
+          showErrorToast(`Gagal: ${error.response.data.message}`);
       } else {
           // Fallback untuk error jaringan/server mati
-          alert("Gagal menambahkan data pemasukan. Terjadi kesalahan server.");
+          showErrorToast("Gagal menambahkan data pemasukan. Terjadi kesalahan server.");
       }
       
     } finally {

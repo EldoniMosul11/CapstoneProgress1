@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function AddCustomer() {
   const [user, setUser] = useState(null);
@@ -54,11 +55,11 @@ export default function AddCustomer() {
         }
       });
 
-      alert("Customer berhasil ditambahkan!");
+      showSuccessToast("Customer berhasil ditambahkan!");
       navigate(`/detailProduk/${produk_id}`);
     } catch (error) {
       console.error("Error adding customer:", error);
-      alert("Gagal menambahkan customer. Silakan coba lagi.");
+      showErrorToast("Gagal menambahkan customer. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }

@@ -50,13 +50,13 @@ export default function InputProduk() {
     if (file) {
       // Check file size (500KB limit)
       if (file.size > 500 * 1024) {
-        alert("Ukuran gambar melebihi 500KB. Silakan pilih gambar yang lebih kecil.");
+        showErrorToast("Ukuran gambar melebihi 500KB. Silakan pilih gambar yang lebih kecil.");
         return;
       }
 
       // Check file type
       if (!file.type.startsWith('image/')) {
-        alert("File harus berupa gambar.");
+        showErrorToast("File harus berupa gambar.");
         return;
       }
 
@@ -110,20 +110,18 @@ export default function InputProduk() {
         }
       });
 
-      alert("Produk berhasil ditambahkan!");
+      showSuccessToast("Produk berhasil ditambahkan!");
       navigate("/menuProduk");
     } catch (error) {
       console.error("Error adding product:", error);
-      alert("Gagal menambahkan produk. Silakan coba lagi.");
+      showErrorToast("Gagal menambahkan produk. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancel = () => {
-    if (window.confirm("Apakah Anda yakin ingin membatalkan? Data yang sudah diisi akan hilang.")) {
-      navigate("/menuProduk");
-    }
+    navigate("/menuProduk");
   };
 
   return (

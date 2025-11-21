@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function EditPengeluaran() {
   const [user, setUser] = useState(null);
@@ -52,7 +53,7 @@ export default function EditPengeluaran() {
       });
     } catch (error) {
       console.error("Error fetching audit data:", error);
-      alert("Gagal memuat data audit");
+      showErrorToast("Gagal memuat data audit");
     }
   };
 
@@ -74,11 +75,11 @@ export default function EditPengeluaran() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      alert("Data pengeluaran berhasil diperbarui!");
+      showSuccessToast("Data pengeluaran berhasil diperbarui!");
       navigate("/auditdata");
     } catch (error) {
       console.error("Error updating pengeluaran:", error);
-      alert("Gagal memperbarui data pengeluaran. Silakan coba lagi.");
+      showErrorToast("Gagal memperbarui data pengeluaran. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }

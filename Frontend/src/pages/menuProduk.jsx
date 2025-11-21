@@ -5,6 +5,7 @@ import api from "../api";
 import kosong from "../assets/kosong.png";
 import garis from "../assets/garis.svg";
 import tambah from "../assets/tambah.svg";
+import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
 // Data produk dari database
 export default function MenuProduk() {
@@ -75,20 +76,23 @@ export default function MenuProduk() {
   };
 
   const handleDeleteProduk = async (product) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus produk "${product.name}"?`)) {
-      try {
-        const token = localStorage.getItem("token");
-        await api.delete(`/produk/${product.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        // Remove product from state
-        setProducts(products.filter(p => p.id !== product.id));
-        alert("Produk berhasil dihapus!");
-      } catch (error) {
-        console.error("Error deleting product:", error);
-        alert("Gagal menghapus produk. Silakan coba lagi.");
+    showConfirmToast(
+      `Apakah Anda yakin ingin menghapus produk "${product.name}"?`,
+      async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await api.delete(`/produk/${product.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          // Remove product from state
+          setProducts(products.filter(p => p.id !== product.id));
+          showSuccessToast("Produk berhasil dihapus!");
+        } catch (error) {
+          console.error("Error deleting product:", error);
+          showErrorToast("Gagal menghapus produk. Silakan coba lagi.");
+        }
       }
-    }
+    );
   };
 
   return (
@@ -141,11 +145,10 @@ export default function MenuProduk() {
                   />
                 </div>
               </div>
-                <h3 className="text-xl font-semibold text-gray-800 ">
+                <h3 className="text-xl font-semibold text-gray-800 text-left">
                   {product.name}
                 </h3>
-                <div className="flex items-center gap-2 text-gray-600 mb-4">
-                  {/* <i className="fas fa-box text-red-500"></i> */}
+                <div className="flex text-gray-600 mb-4">
                   <span>Sisa Stok: {product.stock}</span>
                 </div>
                 <div className="flex gap-2 mt-auto">

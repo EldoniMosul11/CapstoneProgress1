@@ -9,6 +9,7 @@ import deleteIcon from "../assets/delete.svg";
 import pemasukan from "../assets/pemasukan.svg";
 import pengeluaran from "../assets/pengeluaran.svg";
 import profit from "../assets/profit.svg";
+import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
 // Function to check if date is in current month (any year)
 const isInCurrentMonth = (dateInput) => {
@@ -120,18 +121,22 @@ export default function AuditData() {
   }, [auditData, currentMonth]);
 
   const handleDeleteAudit = async (id) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus data audit ini?")) {
-      try {
-        const token = localStorage.getItem("token");
-        await api.delete(`/audit/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fetchAuditData(); // Refresh data after deletion
-      } catch (error) {
-        console.error("Error deleting audit data:", error);
-        alert("Gagal menghapus data audit");
+    showConfirmToast(
+      "Apakah Anda yakin ingin menghapus data audit ini?",
+      async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await api.delete(`/audit/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          fetchAuditData(); // Refresh data after deletion
+          showSuccessToast("Data audit berhasil dihapus!");
+        } catch (error) {
+          console.error("Error deleting audit data:", error);
+          showErrorToast("Gagal menghapus data audit. Silakan coba lagi.");
+        }
       }
-    }
+    );
   };
 
   const formatCurrency = (amount) => {
@@ -292,8 +297,8 @@ export default function AuditData() {
                   </td>
                   <td className="py-3 px-4">{formatCurrency(item.harga_satuan)}</td>
                   <td className="py-3 px-4">{item.produk ? item.produk.unit : (item.satuan || "Pcs")}</td>
-                  <td className="py-3 px-4 font-bold text-blue-600">{item.jumlah}</td> {/* Bold jumlah biar jelas */}
-                  <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.tanggal)}</td> {/* No Wrap tanggal */}
+                  <td className="py-3 px-4 font-bold text-blue-600">{item.jumlah}</td>
+                  <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.tanggal)}</td>
                   <td className={`py-3 px-4 font-semibold whitespace-nowrap ${
                     item.jenis_transaksi === 'penjualan' ? 'text-green-600' : 'text-red-600'
                   }`}>

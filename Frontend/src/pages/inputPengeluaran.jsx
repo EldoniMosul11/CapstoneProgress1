@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import garis from "../assets/garis.svg";
+import { showSuccessToast, showErrorToast } from "../components/Toast";
 
 export default function InputPengeluaran() {
   const [user, setUser] = useState(null);
@@ -51,11 +52,11 @@ export default function InputPengeluaran() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      alert("Data pengeluaran berhasil ditambahkan!");
+      showSuccessToast("Data pengeluaran berhasil ditambahkan!");
       navigate("/auditdata");
     } catch (error) {
       console.error("Error adding pengeluaran:", error);
-      alert("Gagal menambahkan data pengeluaran. Silakan coba lagi.");
+      showErrorToast("Gagal menambahkan data pengeluaran. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
