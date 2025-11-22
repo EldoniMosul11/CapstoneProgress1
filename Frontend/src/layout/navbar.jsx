@@ -39,6 +39,20 @@ export default function Navbar({ username }) {
 
   const isActive = (path) => location.pathname === path;
 
+  const isProdukActive = () => {
+    const path = location.pathname;
+    return (
+      path === '/menu-produk' ||        // Halaman utama produk
+      path.includes('/detailProduk') || // Halaman detail
+      path.includes('/produk/')         // Halaman edit atau input
+    );
+  };
+
+  const isAuditActive = () => {
+    const path = location.pathname.toLowerCase();
+    return path.includes('audit');
+  };
+
   return (
     <nav className="fixed top-0 left-0 w-full flex items-center justify-between bg-[#FFC63C] px-6 py-3 shadow-md rounded-md font-[Poppins] z-50">
       <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -51,8 +65,8 @@ export default function Navbar({ username }) {
       {/* Desktop Menu */}
       <ul className="hidden md:flex gap-8 list-none">
         <li><a href="/dashboard" className={`px-3 py-2 rounded-lg font-semibold hover:text-black hover:underline ${isActive('/dashboard') ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Beranda</a></li>
-        <li><a href="/menu-produk" className={`px-3 py-2 rounded-lg font-medium hover:text-black hover:underline ${isActive('/menu-produk') ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Produk</a></li>
-        <li><a href="/auditdata" className={`px-3 py-2 rounded-lg font-medium hover:text-black hover:underline ${isActive('/auditdata') ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Audit Data</a></li>
+        <li><a href="/menu-produk" className={`px-3 py-2 rounded-lg font-medium hover:text-black hover:underline ${isProdukActive() ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Produk</a></li>
+        <li><a href="/auditdata" className={`px-3 py-2 rounded-lg font-medium hover:text-black hover:underline ${isAuditActive() ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Audit Data</a></li>
         <li><a href="/dashboardPrediksi" className={`px-3 py-2 rounded-lg font-medium hover:text-black hover:underline ${isActive('/dashboardPrediksi') ? 'bg-[#FFB300] text-[#222]' : 'text-[#222]'}`}>Dashboard Prediksi</a></li>
       </ul>
 
@@ -83,6 +97,8 @@ export default function Navbar({ username }) {
           </>
         )}
       </div>
+
+      
 
       {/* Mobile User Button - Opens Sidebar */}
       <button
