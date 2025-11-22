@@ -121,7 +121,7 @@ export default function InputProduk() {
   };
 
   const handleCancel = () => {
-    navigate("/menuProduk");
+    navigate("/menu-Produk");
   };
 
   return (
@@ -140,42 +140,49 @@ export default function InputProduk() {
         <div className="bg-white rounded-xl shadow-md p-8">
           <form onSubmit={handleSubmit}>
             {/* Image Upload Section */}
-            <div className="mb-8 flex items-center gap-6 justify-center">
-              <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden">
+            <div className="mb-8 flex flex-col md:flex-row items-center gap-6 justify-center">
+              
+              {/* Kotak Preview Gambar */}
+              <div className="flex-shrink-0 w-32 h-32 md:w-24 md:h-24 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden">
                 <img
                   src={previewImage || kosong}
                   alt="Preview"
                   className="w-full h-full object-cover rounded-lg border border-gray-300"
                 />
               </div>
-              <div >
-                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+
+              {/* Bagian Tombol Upload */}
+              <div className="w-full md:w-auto flex flex-col items-center md:items-start">
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-center md:text-left">
                   Unggah gambar produk, maks 500kb
                 </label>
+                
                 <div className="flex gap-3 items-center w-full max-w-xs p-2 bg-gray-50 rounded-lg border border-gray-200">
-                  {/* Buttons */}
-                    <label className="cursor-pointer flex-shrink-0">
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                      />
-                      <div className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors">
-                        Unggah
-                      </div>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleRemoveImage}
-                      className="max-w-[70%] px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex-1 min-w-0 truncate"
-                      title={fileName}
-                    >
-                      {fileName}
-                    </button>
-                  </div>
+                  {/* Tombol Unggah */}
+                  <label className="cursor-pointer flex-shrink-0">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                    <div className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors text-sm">
+                      Unggah
+                    </div>
+                  </label>
+
+                  {/* Tombol Nama File / Hapus */}
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex-1 min-w-0 truncate text-sm text-left"
+                    title={fileName}
+                  >
+                    {fileName}
+                  </button>
                 </div>
               </div>
+            </div>
 
             {/* Form Fields */}
             <div className="space-y-6">
