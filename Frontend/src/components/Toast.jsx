@@ -20,7 +20,7 @@ export const showErrorToast = (message) => showToast('error', message);
 export const showWarningToast = (message) => showToast('warn', message);
 export const showInfoToast = (message) => showToast('info', message);
 
-export const showConfirmToast = (message, onConfirm, onCancel) => {
+export const showConfirmToast = (message, onConfirm, onCancel, confirmText = "Hapus", confirmColor = "bg-red-500") => {
   toast(
     <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-lg shadow-xl border border-gray-200 max-w-sm mx-auto">
       <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-full">
@@ -47,9 +47,11 @@ export const showConfirmToast = (message, onConfirm, onCancel) => {
             toast.dismiss();
             if (onConfirm) onConfirm();
           }}
-          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+          // Ubah class bg-red-500 menjadi dynamic `${confirmColor}`
+          className={`flex-1 px-4 py-2 text-sm font-medium text-white ${confirmColor} border border-transparent rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors`}
         >
-          Hapus
+          {/* Gunakan variabel confirmText di sini */}
+          {confirmText}
         </button>
       </div>
     </div>,
