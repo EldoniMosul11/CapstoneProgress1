@@ -188,7 +188,7 @@ export default function AuditData() {
        </div>
 
       {/* Monthly Summary Cards */}
-      <div className="mt-5 flex justify-center gap-8 flex-wrap">
+      {/* <div className="mt-5 flex justify-center gap-8 flex-wrap">
         {[
           { title: "Total Pendapatan (Bulan)", color: "text-green-600", value: formatCurrency(monthlySummary.totalPendapatan), icon: pemasukan },
           { title: "Total Pengeluaran (Bulan)", color: "text-red-600", value: formatCurrency(monthlySummary.totalPengeluaran), icon: pengeluaran },
@@ -205,7 +205,7 @@ export default function AuditData() {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Tab Navigation */}
       <div className="flex justify-center mt-8">
