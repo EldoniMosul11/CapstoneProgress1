@@ -66,9 +66,7 @@ export default function AddCustomer() {
   };
 
   const handleCancel = () => {
-    if (window.confirm("Apakah Anda yakin ingin membatalkan? Data tidak akan disimpan.")) {
-      navigate(`/detailProduk/${produk_id}`);
-    }
+    navigate(`/detailProduk/${produk_id}`);
   };
 
   return (
