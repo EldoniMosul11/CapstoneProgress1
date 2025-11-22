@@ -10,23 +10,25 @@ import pemasukan from "../assets/pemasukan.svg";
 import pengeluaran from "../assets/pengeluaran.svg";
 import profit from "../assets/profit.svg";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
+import GroupedBarChart from "../components/GroupedBarChart";
 
 // Function to check if date is in current month (any year)
 const isInCurrentMonth = (dateInput) => {
+  if (!dateInput) return false;
   const now = new Date();
   const currentMonth = now.getMonth(); // 0-based
-
   let date;
-  if (typeof dateInput === 'string') {
-    // Handle ISO date strings like "2025-11-15T17:00:00.000Z"
+  // handle numeric timestamps, ISO strings, or Date objects
+  if (typeof dateInput === 'number') {
     date = new Date(dateInput);
+  } else if (typeof dateInput === 'string') {
+    date = new Date(dateInput);
+    if (isNaN(date.getTime())) return false;
   } else if (dateInput instanceof Date) {
     date = dateInput;
   } else {
     return false;
   }
-
-  // Check if month matches current month (ignore year)
   return date.getMonth() === currentMonth;
 };
 
@@ -93,16 +95,15 @@ export default function AuditData() {
   };
 
   useEffect(() => {
-    const filtered = auditData.filter(item => {
+     const filtered = auditData.filter(item => {
       const sumber = item.produk ? item.produk.nama_produk : (item.sumber_pengeluaran || '');
       const matchesSearch = sumber.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTab = activeTab === "pemasukan" ? item.jenis_transaksi === "penjualan" : item.jenis_transaksi === "pengeluaran";
-      const matchesMonth = isInCurrentMonth(item.tanggal);
-      return matchesSearch && matchesTab && matchesMonth;
+      return matchesSearch && matchesTab;
     });
     setFilteredData(filtered);
-  }, [searchTerm, activeTab, auditData, currentMonth]);
-
+  }, [searchTerm, activeTab, auditData]);
+  
   useEffect(() => {
     // Calculate monthly summary from all audit data (current month only, regardless of tab)
     const monthlyData = auditData.filter(item => isInCurrentMonth(item.tanggal));
@@ -207,6 +208,16 @@ export default function AuditData() {
         ))}
       </div> */}
 
+      {/* Grouped Bar Chart untuk analisis total pendapatan dan pengeluaran 4 minggu terakhir */}
+      <div className="mt-5 flex justify-center px-4">
+        <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-4xl">
+          <div className="h-[350px] w-full flex justify-center">
+            {/* Kirim seluruh data audit, biar komponen yang ngitung 4 minggunya */}
+            <GroupedBarChart data={auditData} />
+          </div>
+        </div>
+      </div>
+
       {/* Tab Navigation */}
       <div className="flex justify-center mt-8">
         <div className="bg-white rounded-lg shadow-sm p-1">
@@ -271,11 +282,11 @@ export default function AuditData() {
         </div>
 
         {/* --- AREA SCROLLABLE TABEL --- */}
-        <div className="overflow-x-auto overflow-y-auto max-h-[700px] border rounded-lg relative">
+        <div className="overflow-x-auto overflow-y-auto max-h-[400px] border rounded-lg">
           <table className="w-full text-sm text-center border-collapse relative">
             
             {/* Header Sticky */}
-            <thead className="sticky top-0 z-10 bg-gray-100 text-gray-600 shadow-sm">
+            <thead className="sticky top-0 z-10 bg-gray-100 text-gray-600 uppercase text-xs tracking-wide shadow-sm">
               <tr>
                 <th className="py-3 px-4 font-semibold border-b">No</th>
                 <th className="py-3 px-4 font-semibold border-b">Sumber</th>
@@ -288,21 +299,24 @@ export default function AuditData() {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="text-gray-700">
               {filteredData.map((item, index) => (
                 <tr key={item.id} className="hover:bg-gray-50 border-b last:border-0 transition-colors">
                   <td className="py-3 px-4">{index + 1}</td>
-                  <td className="py-3 px-4 font-medium text-gray-800">
+                  <td className="py-3 px-4 font-medium text-gray-800 text-left">
                     {item.produk ? item.produk.nama_produk : item.sumber_pengeluaran}
                   </td>
                   <td className="py-3 px-4">{formatCurrency(item.harga_satuan)}</td>
                   <td className="py-3 px-4">{item.produk ? item.produk.unit : (item.satuan || "Pcs")}</td>
                   <td className="py-3 px-4 font-bold text-blue-600">{item.jumlah}</td>
-                  <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.tanggal)}</td>
+                  <td className="py-3 px-4 whitespace-nowrap text-xs">
+                      {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}, 
+                      {new Date(item.tanggal).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </td>
                   <td className={`py-3 px-4 font-semibold whitespace-nowrap ${
-                    item.jenis_transaksi === 'penjualan' ? 'text-green-600' : 'text-red-600'
+                    item.jenis_transaksi === 'penjualan' || item.jenis_transaksi === 'pemasukan' ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {item.jenis_transaksi === 'penjualan' ? '+' : '-'}{formatCurrency(item.total_pendapatan)}
+                    {item.jenis_transaksi === 'penjualan' || item.jenis_transaksi === 'pemasukan' ? '+' : '-'}{formatCurrency(item.total_pendapatan)}
                   </td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
                     <button
