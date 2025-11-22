@@ -18,7 +18,9 @@ export default function Navbar({ username }) {
       },
       () => {
         // Batal logout
-      }
+      },
+      "Logout",
+      "bg-red-600"
     );
   };
 
