@@ -110,58 +110,68 @@ export default function DashboardPrediksi() {
 
   // --- LOGIKA SCORE CARD (UPDATE FORMAT TANGGAL) ---
   const processData = () => {
-    if (auditData.length === 0) return;
+    if (!auditData || auditData.length === 0) return;
 
-    const sortedData = [...auditData].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+    // 1. Sorting Data
+    const sortedData = [...auditData].sort((a, b) => {
+        const dateA = new Date(a.tanggal).getTime() || 0;
+        const dateB = new Date(b.tanggal).getTime() || 0;
+        return dateB - dateA;
+    });
+
+    // Ambil tanggal data paling baru (Misal: 18 Nov 2025)
     const latestDate = new Date(sortedData[0].tanggal);
 
-    // 1. Tentukan Range Minggu Ini
-    const startOfWeek = new Date(latestDate);
-    const day = startOfWeek.getDay() || 7; 
-    if (day !== 1) startOfWeek.setDate(startOfWeek.getDate() - (day - 1));
-    startOfWeek.setHours(0, 0, 0, 0);
+    // 2. Cari Hari Senin dari minggu data tersebut (Misal: Senin, 17 Nov 2025)
+    const currentWeekMonday = new Date(latestDate);
+    const day = currentWeekMonday.getDay() || 7; 
+    if (day !== 1) currentWeekMonday.setDate(currentWeekMonday.getDate() - (day - 1));
+    currentWeekMonday.setHours(0, 0, 0, 0);
+
+    // --- PERUBAHAN LOGIKA DI SINI ---
+    // Kita ingin menampilkan MINGGU LALU (Minggu Audit), bukan minggu berjalan.
+    // Jadi kita mundurkan startOfWeek sebanyak 7 hari ke belakang.
+    
+    const startOfWeek = new Date(currentWeekMonday);
+    startOfWeek.setDate(startOfWeek.getDate() - 7); // Mundur ke 10 Nov
     
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);   // Sampai 16 Nov
     endOfWeek.setHours(23, 59, 59, 999);
 
-    // 2. Tentukan Range Minggu Lalu
+    // 3. Tentukan Range Minggu Sebelumnya Lagi (Untuk perbandingan Tren)
+    // (Misal: 3 Nov - 9 Nov)
     const startOfPrevWeek = new Date(startOfWeek);
     startOfPrevWeek.setDate(startOfPrevWeek.getDate() - 7);
+    
     const endOfPrevWeek = new Date(endOfWeek);
     endOfPrevWeek.setDate(endOfPrevWeek.getDate() - 7);
 
-    // 3. Format Label Minggu (UPDATE: Pakai Format Panjang Indonesia)
-    const formatHeaderDate = (date) => {
-        return date.toLocaleDateString('id-ID', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
-        });
+    // Helper: Cek Range
+    const isInRange = (dateStr, start, end) => {
+        const d = new Date(dateStr).getTime();
+        return d >= start.getTime() && d <= end.getTime();
     };
-    const weekLabel = `${formatHeaderDate(startOfWeek)} - ${formatHeaderDate(endOfWeek)}`;
 
-    // 4. Filter Data
-    const thisWeekData = auditData.filter(item => {
-        const d = new Date(item.tanggal);
-        return d >= startOfWeek && d <= endOfWeek;
-    });
+    // Filter Data
+    // "thisWeekData" sekarang berisi data 10-16 Nov (Minggu Audit)
+    const thisWeekData = auditData.filter(item => isInRange(item.tanggal, startOfWeek, endOfWeek));
+    const prevWeekData = auditData.filter(item => isInRange(item.tanggal, startOfPrevWeek, endOfPrevWeek));
 
-    const prevWeekData = auditData.filter(item => {
-        const d = new Date(item.tanggal);
-        return d >= startOfPrevWeek && d <= endOfPrevWeek;
-    });
-
-    // 5. Hitung Total
+    // --- FUNGSI HITUNG TOTAL ---
     const calcTotal = (data, type) => {
         return data.filter(item => {
-            const t = item.jenis_transaksi ? item.jenis_transaksi.toLowerCase() : '';
+            const t = (item.jenis_transaksi || '').toLowerCase(); 
             if (type === 'pemasukan') return t === 'pemasukan' || t === 'penjualan';
             if (type === 'pengeluaran') return t === 'pengeluaran' || item.produk_id === null;
             return false;
-        }).reduce((sum, item) => sum + (Number(item.total_pendapatan) || 0), 0);
+        }).reduce((sum, item) => {
+            const val = Number(item.total_pendapatan) || 0;
+            return sum + Math.abs(val);
+        }, 0);
     };
 
+    // Hitung Nilai
     const currPendapatan = calcTotal(thisWeekData, 'pemasukan');
     const currPengeluaran = calcTotal(thisWeekData, 'pengeluaran');
     const currProfit = currPendapatan - currPengeluaran;
@@ -170,14 +180,23 @@ export default function DashboardPrediksi() {
     const prevPengeluaran = calcTotal(prevWeekData, 'pengeluaran');
     const prevProfit = prevPendapatan - prevPengeluaran;
 
+    // Format Header
+    const formatHeaderDate = (date) => {
+        return date.toLocaleDateString('id-ID', { 
+            day: 'numeric', month: 'long', year: 'numeric' 
+        });
+    };
+    const startStr = formatHeaderDate(startOfWeek);
+    const endStr = formatHeaderDate(endOfWeek);
+
     setSummary({
-        totalPendapatan: currPendapatan,
-        diffPendapatan: currPendapatan - prevPendapatan,
-        totalPengeluaran: currPengeluaran,
-        diffPengeluaran: currPengeluaran - prevPengeluaran,
-        totalProfit: currProfit,
-        diffProfit: currProfit - prevProfit,
-        mingguData: weekLabel // Simpan label format baru
+      totalPendapatan: currPendapatan,
+      diffPendapatan: currPendapatan - prevPendapatan,
+      totalPengeluaran: currPengeluaran,
+      diffPengeluaran: currPengeluaran - prevPengeluaran,
+      totalProfit: currProfit,
+      diffProfit: currProfit - prevProfit,
+      mingguData: `${startStr} - ${endStr}`
     });
   };
 
