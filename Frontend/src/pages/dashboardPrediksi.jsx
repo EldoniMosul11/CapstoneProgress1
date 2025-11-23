@@ -432,13 +432,13 @@ export default function DashboardPrediksi() {
 
             {apiResponse && apiResponse.forecast_data && apiResponse.forecast_data.length > 0 && (
             <div className="overflow-x-auto mt-8">
-                <h3 className="text-lg font-bold text-gray-700 mb-3 border-l-4 border-blue-600 pl-3">Rincian Hasil Prediksi</h3>
+                <h3 className="text-lg text-left font-bold text-gray-700 mb-3 border-l-4 border-blue-600 pl-3">Rincian Hasil Prediksi</h3>
                 <table className="min-w-full bg-white border border-gray-200">
                 <thead className="bg-gray-100">
                     <tr>
-                    <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Tanggal</th>
-                    <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Prediksi Jumlah</th>
-                    <th className="py-3 px-4 border-b text-left text-sm font-semibold text-gray-600">Estimasi Pendapatan</th>
+                    <th className="py-3 px-4 border-b text-sm font-semibold text-gray-600">Tanggal</th>
+                    <th className="py-3 px-4 border-b text-sm font-semibold text-gray-600">Prediksi Jumlah</th>
+                    <th className="py-3 px-4 border-b text-sm font-semibold text-gray-600">Estimasi Pendapatan</th>
                     </tr>
                 </thead>
                 <tbody>
