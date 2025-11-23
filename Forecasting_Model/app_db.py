@@ -11,25 +11,21 @@ from sqlalchemy import create_engine
 
 # --- 0. Inisialisasi Aplikasi Flask ---
 app = Flask(__name__)
-CORS(app)  # Mengizinkan CORS untuk semua domain (untuk pengujian lokal)
+CORS(app)  # Mengizinkan CORS
 
 # --- 1. DEKLARASI KONEKSI DB & VARIABEL GLOBAL ---
-# =================================================
-# SESUAIKAN INI DENGAN PENGATURAN DATABASE ANDA
 DB_USER = "root"
 DB_PASS = ""
 DB_HOST = "localhost"
 DB_PORT = "3306"
 DB_NAME = "kembarbarokahdb"
 
-# Buat koneksi engine
 DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 g_db_engine = create_engine(DATABASE_URI)
 
-# Variabel ini akan dimuat SEKALI saat server start
 g_models = {}
 g_scalers = {}
-g_scalers_features_only = {} # Scaler HANYA untuk fitur masa depan
+g_scalers_features_only = {} 
 g_holiday_set = None
 g_window_size = 4
 
@@ -41,8 +37,7 @@ g_product_prices = {
 g_product_list = ["Kerupuk Kulit", "Stik Bawang", "Keripik Bawang"]
 
 
-# --- 2. FUNGSI HELPER (Sama seperti sebelumnya) ---
-# =================================================
+# --- 2. FUNGSI HELPER ---
 
 def load_holidays(holiday_csv_path):
     print(f"Memuat data hari libur dari: {holiday_csv_path}")
@@ -80,120 +75,128 @@ def get_future_calendar_features(date_range, holiday_set):
         })
     return pd.DataFrame(features)
 
-# --- FUNGSI QUERY UPDATE (Sesuai Tabel 'audit_data' & 'produk') ---
+# --- FUNGSI AGREGASI DATA HARIAN KE MINGGUAN (PENTING!) ---
 def get_historical_data_from_db(product_name, n_weeks):
     """
-    Mengambil data dari tabel PRODUKSI ('audit_data' dan 'produk').
+    Mengambil data harian, lalu di-resample menjadi mingguan (Setiap Senin).
     """
-    print(f"Mengambil {n_weeks} data terakhir dari DB untuk {product_name}...")
+    print(f"Mengambil data historis harian untuk {product_name} dan melakukan resampling...")
     
-    # Query dengan JOIN yang benar sesuai screenshot
+    # 1. Ambil Data Harian (Cukup banyak agar aman saat resampling)
+    # Kita ambil data 20 minggu terakhir (sekitar 5 bulan) untuk memastikan window cukup
+    limit_days = (n_weeks + 5) * 7 
+    
     query = f"""
         SELECT 
-            t1.tanggal as Tanggal_Audit, 
+            t1.tanggal as Tanggal_Transaksi, 
             t1.jumlah as Jumlah_Produk_Terjual
         FROM audit_data t1
         JOIN produk t2 ON t1.produk_id = t2.id
         WHERE 
             t2.nama_produk = '{product_name}'
             AND t1.jenis_transaksi = 'penjualan' 
-        ORDER BY t1.tanggal DESC 
-        LIMIT {n_weeks + 1}
+        ORDER BY t1.tanggal ASC
     """
     
     with g_db_engine.connect() as conn:
         df = pd.read_sql(query, conn)
     
-    # Cek jika data kosong (Penyebab Error 500 Anda)
-    if df.empty or len(df) < (n_weeks + 1):
-        print(f"ERROR: Data tidak ditemukan di tabel 'audit_data' untuk {product_name}.")
-        print("Saran: Pastikan Anda sudah menjalankan 'seed_production.py' untuk mengisi tabel ini.")
-        raise Exception(f"Data DB Kurang. Ditemukan: {len(df)}, Butuh: {n_weeks+1}")
-        
-    # Sorting & Formatting
-    df = df.sort_values(by='Tanggal_Audit', ascending=True)
-    df['Tanggal_Audit'] = pd.to_datetime(df['Tanggal_Audit'])
+    if df.empty:
+        raise Exception(f"Data penjualan kosong untuk produk {product_name}")
 
-    # Feature Engineering
-    df['Nama_Produk'] = product_name 
-    df['Jumlah_Terjual_Minggu_Lalu'] = df['Jumlah_Produk_Terjual'].shift(1)
+    # 2. Preprocessing Data Harian
+    df['Tanggal_Transaksi'] = pd.to_datetime(df['Tanggal_Transaksi'])
+    df = df.set_index('Tanggal_Transaksi')
+
+    # 3. RESAMPLING KE MINGGUAN (W-MON = Weekly, ending on Monday)
+    # Logika: Menjumlahkan semua penjualan dari Selasa s/d Senin
+    # Jika Anda ingin Senin sebagai awal minggu, gunakan logika W-SUN atau geser index.
+    
+    # Opsi Paling Aman sesuai Audit Senin:
+    # Audit dilakukan Senin (tgl 10) merekap data tgl 3-9.
+    # Jadi kita ingin index-nya jatuh pada hari Senin.
+    
+    df_weekly = df.resample('W-MON').sum()
+    
+    # Reset index agar 'Tanggal_Audit' jadi kolom lagi
+    df_weekly = df_weekly.reset_index().rename(columns={'Tanggal_Transaksi': 'Tanggal_Audit'})
+    
+    # 4. Pastikan data terurut dan ambil N terakhir
+    df_weekly = df_weekly.sort_values('Tanggal_Audit', ascending=True)
+    
+    # Cek kecukupan data
+    if len(df_weekly) < (n_weeks + 1):
+        print(f"WARNING: Data mingguan kurang ({len(df_weekly)} minggu). Prediksi mungkin tidak akurat.")
+        # Kita tetap lanjut (jangan raise error) agar sistem tidak crash saat data awal sedikit
+    
+    # Feature Engineering (Mingguan)
+    df_weekly['Nama_Produk'] = product_name 
+    df_weekly['Jumlah_Terjual_Minggu_Lalu'] = df_weekly['Jumlah_Produk_Terjual'].shift(1)
     
     # Fitur Kalender
-    df_calendar_features = get_future_calendar_features(df['Tanggal_Audit'], g_holiday_set)
-    df = pd.merge(df, df_calendar_features, on='Tanggal_Audit', how='left')
+    df_calendar_features = get_future_calendar_features(df_weekly['Tanggal_Audit'], g_holiday_set)
+    df_final = pd.merge(df_weekly, df_calendar_features, on='Tanggal_Audit', how='left')
 
-    df = df.dropna()
-    df_final = df.tail(n_weeks)
+    df_final = df_final.dropna() # Hapus baris pertama yg NaN karena shift
+    df_final = df_final.tail(n_weeks) # Ambil window terakhir
     
     return df_final.set_index('Tanggal_Audit')
 
-# --- 3. FUNGSI STARTUP (Memuat model & scaler) ---
-# =================================================
+# --- 3. FUNGSI STARTUP ---
 def load_all_artifacts():
-    """
-    Memuat SEMUA model, scaler, dan data libur ke memori.
-    TIDAK memuat data historis.
-    """
     global g_holiday_set, g_models, g_scalers, g_scalers_features_only
     
     print("Memuat semua artefak (Model, Scaler, Hari Libur)...")
     
-    # 1. Muat data hari libur
-    holiday_csv_path = 'Tanggal Libur Nasional 2025.csv' # SESUAIKAN NAMA FILE
-    g_holiday_set = load_holidays(holiday_csv_path)
-    if g_holiday_set is None:
-        raise Exception("Gagal memuat data hari libur. Server berhenti.")
+    holiday_csv_path = 'Tanggal Libur Nasional 2025.csv' 
+    if not os.path.exists(holiday_csv_path):
+         print(f"WARNING: File {holiday_csv_path} tidak ditemukan. Menggunakan set kosong.")
+         g_holiday_set = set()
+    else:
+         g_holiday_set = load_holidays(holiday_csv_path)
 
-    # 2. Muat model & scaler per produk
+    # Muat model & scaler
     for product in g_product_list:
         product_key = product.replace(' ', '_')
         model_path = os.path.join('models', f'model_{product_key}.h5')
         scaler_path = os.path.join('models', f'scaler_{product_key}.save')
         scaler_features_path = os.path.join('models', f'scaler_features_{product_key}.save')
         
-        print(f"Memuat artefak untuk: {product}")
-        
-        if not all(os.path.exists(p) for p in [model_path, scaler_path, scaler_features_path]):
-            print(f"WARNING: File (model/scaler/scaler_features) untuk {product} tidak ditemukan!")
-            continue
+        if all(os.path.exists(p) for p in [model_path, scaler_path, scaler_features_path]):
+            print(f"Memuat {product}...")
+            g_models[product] = load_model(model_path, compile=False)
+            g_scalers[product] = joblib.load(scaler_path)
+            g_scalers_features_only[product] = joblib.load(scaler_features_path)
+        else:
+            print(f"SKIP: Artefak untuk {product} tidak lengkap.")
 
-        g_models[product] = load_model(model_path, compile=False)
-        g_scalers[product] = joblib.load(scaler_path)
-        g_scalers_features_only[product] = joblib.load(scaler_features_path) # MEMUAT SCALER FITUR
-
-    print("--- Semua artefak berhasil dimuat. Server siap. ---")
+    print("--- Server siap. ---")
 
 
-# --- 4. ENDPOINT API (Fungsi Prediksi Dimodifikasi) ---
-# =================================================
-
+# --- 4. ENDPOINT API ---
 @app.route('/predict', methods=['POST'])
 def predict():
-    """
-    Endpoint utama yang akan dipanggil oleh Node.js (atau frontend dummy).
-    Sekarang mengembalikan data historis DAN prediksi.
-    """
     try:
         data = request.get_json()
         product_name = data.get('product_name')
-        forecast_steps = data.get('forecast_steps', 1)
-        forecast_steps = int(forecast_steps)
+        forecast_steps = int(data.get('forecast_steps', 1))
         
-        # Berapa banyak data historis yang ingin Anda tampilkan di chart
         n_history_weeks = 5 
 
         if product_name not in g_models:
-            return jsonify({"error": f"Produk tidak valid: {product_name}"}), 400
+            return jsonify({"error": f"Model untuk {product_name} belum tersedia/dilatih."}), 400
 
-        # --- Bagian Prediksi (Sama seperti sebelumnya) ---
-        
         # 1. Ambil artefak
         model = g_models[product_name]
         scaler = g_scalers[product_name]
         scaler_features_only = g_scalers_features_only[product_name]
         
-        # 2. Ambil data historis TERBARU dari DB (untuk window prediksi)
+        # 2. Ambil data historis TERBARU (sudah di-resample mingguan)
         df_hist_window = get_historical_data_from_db(product_name, n_weeks=g_window_size)
+        
+        if len(df_hist_window) < g_window_size:
+             return jsonify({"error": "Data transaksi belum cukup untuk melakukan prediksi (Minimal 4 minggu)."}), 400
+
         df_hist_features = df_hist_window[[
             'Jumlah_Produk_Terjual', 'Jumlah_Terjual_Minggu_Lalu', 
             'is_minggu_gajian', 'is_libur_nasional'
@@ -212,7 +215,7 @@ def predict():
         # 5. Scale fitur masa depan
         future_features_scaled = scaler_features_only.transform(df_future_features_raw[['is_minggu_gajian', 'is_libur_nasional']])
         
-        # 6. Loop prediksi rekursif
+        # 6. Loop prediksi
         forecast_scaled = []
         for i in range(forecast_steps):
             pred_scaled = model.predict(np.expand_dims(current_window, axis=0))[0]
@@ -223,17 +226,14 @@ def predict():
             ])
             current_window = np.append(current_window[1:], [new_row], axis=0)
 
-        # 7. Invers transform hasil akhir
+        # 7. Invers transform
         forecast_values = inverse_transform_helper(forecast_scaled, scaler, n_features)
+        forecast_values = np.maximum(forecast_values, 0) # Cegah nilai negatif
         forecast_values = np.ceil(forecast_values)
         
-        # --- Bagian Data Historis (BARU) ---
-        
-        # 8. Ambil N data historis terakhir dari DB (untuk plot)
-        # Kita panggil fungsi helper lagi, tapi kali ini untuk N minggu
+        # 8. Ambil N data historis terakhir untuk chart (re-query untuk display)
         df_hist_chart = get_historical_data_from_db(product_name, n_weeks=n_history_weeks)
         
-        # Format data historis untuk JSON
         historical_json = []
         for date, row in df_hist_chart.iterrows():
             historical_json.append({
@@ -241,7 +241,6 @@ def predict():
                 "jumlah": int(row['Jumlah_Produk_Terjual'])
             })
             
-        # 9. Siapkan respons JSON
         forecast_json = []
         product_price = g_product_prices.get(product_name, 0)
         for date, value in zip(future_dates, forecast_values):
@@ -253,7 +252,6 @@ def predict():
                 "prediksi_pendapatan": int(revenue)
             })
 
-        # 10. Kembalikan JSON gabungan
         return jsonify({
             "historical_data": historical_json,
             "forecast_data": forecast_json
@@ -264,8 +262,6 @@ def predict():
         return jsonify({"error": f"Terjadi kesalahan internal: {str(e)}"}), 500
     
 # --- 5. Jalankan Server ---
-# =================================================
 if __name__ == '__main__':
-    # Panggil fungsi startup SEKALI
     load_all_artifacts()
     app.run(host='0.0.0.0', port=5001, debug=False)
