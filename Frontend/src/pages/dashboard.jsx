@@ -469,7 +469,7 @@ export default function Beranda() {
                         {item.produk ? item.produk.nama_produk : (item.sumber_pengeluaran || '-')}
                       </td>
                       <td className="py-3 px-4">{formatCurrency(item.harga_satuan || 0)}</td>
-                      <td className="py-3 px-4 font-bold">{item.jumlah}</td>
+                      <td className="py-3 px-4 font-bold text-blue-600">{item.jumlah}</td>
                       <td className="py-3 px-4 whitespace-nowrap text-xs">{formatDate(item.tanggal)}</td>
                       <td className={`py-3 px-4 font-semibold ${
                           item.jenis_transaksi.toLowerCase() === 'penjualan' || item.jenis_transaksi.toLowerCase() === 'pemasukan'
