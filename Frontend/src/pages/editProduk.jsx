@@ -213,7 +213,7 @@ export default function EditProduk() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Stok Saat Ini</label>
-                  <input type="number" name="stock" value={produk.stock} readOnly className="w-full px-4 py-3 border border-gray-200 bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed" />
+                  <input type="number" name="stock" value={produk.stock} onChange={handleInputChange} className="w-full px-4 py-3 border border-gray-200 rounded-lg" />
                 </div>
 
                 {/* --- 4. INPUT HARGA SEBAGAI NUMBER --- */}
