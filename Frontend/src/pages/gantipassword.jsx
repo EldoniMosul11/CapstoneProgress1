@@ -189,7 +189,10 @@ export default function GantiPassword() {
             </button>
 
             <div className="text-center mt-6">
-              <Link to="/login" className="text-blue-600 hover:underline">
+              <Link 
+              to="/login" 
+              className="font-bold text-gray-700 hover:underline hover:text-gray-500"
+              >
                 Kembali ke Login
               </Link>
             </div>
