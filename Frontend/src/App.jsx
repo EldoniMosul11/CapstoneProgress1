@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ToastContainer, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Login from "./pages/login";
-import Register from "./pages/register";
+import GantiPassword from "./pages/gantipassword";
 import Dashboard from "./pages/dashboard";
 import MenuProduk from "./pages/menuProduk";
 import AuditData from "./pages/auditData";
@@ -30,8 +30,13 @@ function AppContent() {
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) {
+        if (!token && window.location.pathname !== "/gantipassword") {
           navigate("/login");
+          return;
+        }
+        if (!token && window.location.pathname === "/gantipassword") {
+          // allow access without token
+          setUser(null);
           return;
         }
         const res = await api.get("/auth/me");
@@ -51,7 +56,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/gantipassword" element={<GantiPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/menu-produk" element={<MenuProduk />} /> 
           <Route path="/auditdata" element={<AuditData />} />

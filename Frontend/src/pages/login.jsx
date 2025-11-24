@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
 import { showErrorToast } from "../components/Toast";
 import logo from "../assets/logo.png"; // pastikan kamu punya file ini di src/assets/logo.png
 import ceklis from "../assets/ceklis.svg"; // ikon tombol login
+import { HiEye, HiEyeOff } from "react-icons/hi";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const toggleShowPassword = () => setShowPassword(!showPassword);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,9 +47,9 @@ export default function Login() {
             </h1>
           </div>
 
-          <form onSubmit={handleLogin}>
+          <form>
             <div className="mb-4">
-              <label htmlFor="username" className="block mb-2 text-gray-700">
+              <label htmlFor="username" className="block mb-2 text-gray-700 text-left">
                 Username
               </label>
               <input
@@ -59,27 +64,50 @@ export default function Login() {
             </div>
 
             <div className="mb-4">
-              <label htmlFor="password" className="block mb-2 text-gray-700">
+              <label htmlFor="password" className="block mb-2 text-gray-700 text-left">
                 Password
               </label>
-              <input
-                type="password"
-                id="password"
-                placeholder="Enter your password"
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full p-3 border border-gray-300 rounded text-base"
+                className="w-full p-3 border border-gray-300 rounded text-base pr-10"
               />
+                <span
+                  className="absolute inset-y-0 right-0 flex items-center px-3 cursor-pointer text-gray-600"
+                  onClick={toggleShowPassword}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {showPassword ? (
+                    <HiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <HiEye className="h-5 w-5" />
+                  )}
+                </span>
+              </div>
             </div>
 
             <button
-              type="submit"
-              className="w-full p-3 bg-black text-white rounded text-base cursor-pointer flex justify-center items-center gap-2.5"
+              type="button"
+              disabled={isLoading}
+              onClick={handleLogin}
+              className={`w-full p-3 rounded text-base cursor-pointer flex justify-center items-center gap-2.5 ${
+                isLoading ? "bg-gray-500 cursor-not-allowed" : "bg-black text-white"
+              }`}
             >
               <img src={ceklis} alt="ceklis" className="w-4.5" />
               Login
             </button>
+            <div className="text-center mt-4">
+              <Link to="/gantipassword" className="text-blue-600 hover:underline">
+                Ganti Password
+              </Link>
+            </div>
           </form>
         </div>
       </div>
