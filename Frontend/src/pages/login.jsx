@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
 import { showErrorToast } from "../components/Toast";
-import logo from "../assets/logo.png"; // pastikan kamu punya file ini di src/assets/logo.png
-import ceklis from "../assets/ceklis.svg"; // ikon tombol login
+import logo from "../assets/logo.png"; 
+import ceklis from "../assets/ceklis.svg";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 
 export default function Login() {
@@ -30,8 +30,12 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center items-center bg-gradient-radial from-yellow-400 to-orange-400 w-screen h-screen">
-      <div className="w-3/5">
+    // Container Utama: Full Screen, Flex Center, Background Gradient
+    <div className="flex justify-center items-center min-h-screen w-full bg-gradient-radial from-yellow-400 to-orange-400 p-4">
+      
+      {/* Card Container: Lebar Responsif */}
+      <div className="w-full max-w-md"> 
+        
         <div className="bg-yellow-100 rounded-full w-24 mx-auto shadow-2xl">
           <img
             src={logo}
@@ -104,7 +108,10 @@ export default function Login() {
               Login
             </button>
             <div className="text-center mt-4">
-              <Link to="/gantipassword" className="text-blue-600 hover:underline">
+              <Link
+                to="/gantipassword"
+                className="font-bold text-gray-700 hover:underline hover:text-gray-500"
+              >
                 Ganti Password
               </Link>
             </div>
