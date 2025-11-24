@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
 import { showErrorToast } from "../components/Toast";
 import logo from "../assets/logo.png"; // pastikan kamu punya file ini di src/assets/logo.png
@@ -80,6 +80,11 @@ export default function Login() {
               <img src={ceklis} alt="ceklis" className="w-4.5" />
               Login
             </button>
+            <div className="text-center mt-4">
+              <Link to="/gantipassword" className="text-blue-600 hover:underline">
+                Ganti Password
+              </Link>
+            </div>
           </form>
         </div>
       </div>

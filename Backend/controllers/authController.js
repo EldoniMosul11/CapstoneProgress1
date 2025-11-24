@@ -77,3 +77,39 @@ export const getUser = (req, res) => {
     res.json(user.toJSON());
   });
 };
+
+export const changePassword = (req, res) => {
+  const { username, oldPassword, newPassword, confirmPassword } = req.body;
+
+  if (!username || !oldPassword || !newPassword || !confirmPassword) {
+    return res.status(400).json({ message: "Semua field harus diisi" });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: "Password baru dan konfirmasi tidak cocok" });
+  }
+
+  const sql = "SELECT * FROM users WHERE username = ?";
+  db.query(sql, [username], (err, data) => {
+    if (err)
+      return res.status(500).json({ message: "Error mencari user", error: err });
+    if (data.length === 0)
+      return res.status(404).json({ message: "User tidak ditemukan" });
+
+    const user = data[0];
+    // menggunakan bcrypt.compare untuk verifikasi password lama
+    bcrypt.compare(oldPassword, user.password, (err, isMatch) => {
+      if (err) return res.status(500).json({ message: "Error validasi password", error: err });
+      if (!isMatch) return res.status(401).json({ message: "Password lama salah" });
+
+      const hashedPassword = bcrypt.hashSync(newPassword, 10);
+      const updateSql = "UPDATE users SET password = ? WHERE username = ?";
+      db.query(updateSql, [hashedPassword, username], (err) => {
+        if (err)
+          return res.status(500).json({ message: "Error mengupdate password", error: err });
+
+        res.json({ message: "Password berhasil diubah" });
+      });
+    });
+  });
+};
