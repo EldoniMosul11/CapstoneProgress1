@@ -6,6 +6,7 @@ import kosong from "../assets/kosong.png";
 import garis from "../assets/garis.svg";
 import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete.svg";
+import locationIcon from "../assets/lokasi.svg"; // Pastikan Anda punya icon ini atau ganti dengan SVG inline
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
 // Data dummy fallback
@@ -19,19 +20,10 @@ const initialProdukData = {
   unit: "Pcs"
 };
 
-// Data dummy customers (karena belum ada API)
-const customersData = [
-  { id: 1, nama: "Pak Iwan", produk: "Kerupuk Kulit", alamat: "https://maps.app.goo.gl/EtqdHzBSMXAvcqM9" },
-  { id: 2, nama: "Bu Darsih", produk: "Kerupuk Kulit", alamat: "https://maps.app.goo.gl/EtqdHzBSMXAvcqM9" },
-  { id: 3, nama: "Pak Nono", produk: "Kerupuk Kulit", alamat: "https://maps.app.goo.gl/EtqdHzBSMXAvcqM9" },
-  { id: 4, nama: "Pak Bagas", produk: "Kerupuk Kulit", alamat: "https://maps.app.goo.gl/EtqdHzBSMXAvcqM9" },
-  { id: 5, nama: "Bu Desi", produk: "Kerupuk Kulit", alamat: "https://maps.app.goo.gl/EtqdHzBSMXAvcqM9" }
-];
-
 export default function DetailProduk() {
   const [user, setUser] = useState(null);
   const [produk, setProduk] = useState(initialProdukData);
-  const [customers, setCustomers] = useState([]); // Will be fetched from API
+  const [customers, setCustomers] = useState([]); 
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -63,7 +55,6 @@ export default function DetailProduk() {
           id: res.data.id,
           name: res.data.nama_produk,
           description: res.data.detail_produk || "Tidak ada deskripsi.",
-          // Handle gambar: jika ada, tambahkan host. Jika tidak, pakai placeholder.
           image: res.data.gambar ? `http://localhost:5000${res.data.gambar}` : kosong,
           stock: res.data.stok_tersedia,
           price: res.data.harga_satuan ? `Rp ${parseInt(res.data.harga_satuan).toLocaleString('id-ID')}` : "Rp 0",
@@ -102,10 +93,6 @@ export default function DetailProduk() {
 
   const handleAddCostumer = () => {
     navigate(`/produk/add-customer/${id}`);
-  };
-
-  const handleMapsClick = (url) => {
-    window.open(url, '_blank');
   };
 
   const handleEditCustomer = (customerId) => {
@@ -152,11 +139,11 @@ export default function DetailProduk() {
             <div className="flex-shrink-0">
               <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white flex items-center justify-center">
                  <img
-                    src={produk.image}
-                    alt={produk.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.onerror = null; e.target.src = kosong; }}
-                  />
+                   src={produk.image}
+                   alt={produk.name}
+                   className="w-full h-full object-cover"
+                   onError={(e) => { e.target.onerror = null; e.target.src = kosong; }}
+                 />
               </div>
             </div>
 
@@ -229,15 +216,21 @@ export default function DetailProduk() {
                             {produk.name}
                         </span>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleMapsClick(customer.alamat)}
-                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center gap-1 mx-auto underline"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        Buka Maps
-                      </button>
+                    
+                    {/* --- BAGIAN ALAMAT (DIPERBAIKI) --- */}
+                    <td className="py-3 px-4 text-left">
+                      <div className="flex items-start gap-2">
+                        {/* Ikon Lokasi (SVG Inline agar tidak perlu import gambar jika tidak ada) */}
+                        <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-sm text-gray-700 break-words max-w-[300px]">
+                            {customer.alamat}
+                        </span>
+                      </div>
                     </td>
+
                     <td className="py-3 px-4">
                         <div className="flex justify-center gap-3">
                           <button

@@ -93,7 +93,7 @@ export default function EditCustomer() {
   };
 
   const handleCancel = () => {
-    navigate("/menu-produk");
+    navigate(`/detailProduk/${formData.produk_id}`);
   };
 
   if (isFetching) {
