@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine, text  
 import sys
 
-# --- KONFIGURASI ---
+# KONFIGURASI
 DB_USER = "root"
 DB_PASS = ""
 DB_HOST = "localhost"

@@ -31,8 +31,7 @@ export default function Beranda() {
   });
 
   // State Charts & Table
-  const [pieData, setPieData] = useState(null);
-  const [barData, setBarData] = useState(null);
+  const [chartRefDate, setChartRefDate] = useState(null); 
   const [filteredTableData, setFilteredTableData] = useState([]);
 
   const navigate = useNavigate();
@@ -56,12 +55,9 @@ export default function Beranda() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        
-        // 1. Get User
         const userRes = await api.get("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
         setUser(userRes.data);
 
-        // 2. Get Audit Data
         const auditRes = await api.get("/audit", { headers: { Authorization: `Bearer ${token}` } });
         setAuditData(auditRes.data.data);
 
@@ -87,7 +83,7 @@ export default function Beranda() {
   }, [searchTerm]);
 
 
-  // --- LOGIKA UTAMA (DIPERBAIKI TOTAL) ---
+  // --- LOGIKA UTAMA ---
   const processDashboardData = () => {
     if (!auditData || auditData.length === 0) return;
 
@@ -98,29 +94,26 @@ export default function Beranda() {
         return dateB - dateA;
     });
 
-    // Ambil tanggal data paling baru (Misal: 17 Nov 2025)
     const latestDataDate = new Date(sortedData[0].tanggal);
 
-    // 2. Cari Hari Senin dari MINGGU TERBARU (Minggu Berjalan)
-    // Jika data terakhir adalah 17 Nov (Senin), maka currentWeekMonday adalah 17 Nov.
+    // 2. Cari Hari Senin dari MINGGU TERBARU
     const currentWeekMonday = new Date(latestDataDate);
     const day = currentWeekMonday.getDay() || 7; 
     if (day !== 1) currentWeekMonday.setDate(currentWeekMonday.getDate() - (day - 1));
     currentWeekMonday.setHours(0, 0, 0, 0);
 
-    // 3. TENTUKAN PERIODE AUDIT TERAKHIR (Mundur 1 Minggu)
-    // Kita ingin menampilkan data minggu lalu (10-16 Nov) di Scorecard & Grafik.
-    // Data minggu ini (17-23 Nov) HANYA tampil di tabel bawah.
-    
+    // 3. TENTUKAN PERIODE AUDIT TERAKHIR
     const auditStartWeek = new Date(currentWeekMonday);
-    auditStartWeek.setDate(auditStartWeek.getDate() - 7); // Mundur ke 10 Nov
+    auditStartWeek.setDate(auditStartWeek.getDate() - 7); 
     
     const auditEndWeek = new Date(auditStartWeek);
-    auditEndWeek.setDate(auditStartWeek.getDate() + 6);   // Sampai 16 Nov
+    auditEndWeek.setDate(auditStartWeek.getDate() + 6);   
     auditEndWeek.setHours(23, 59, 59, 999);
 
-    // 4. Tentukan Range Minggu Sebelumnya Lagi (Untuk perbandingan Tren/Diff)
-    // (Misal: 3 Nov - 9 Nov)
+    // Simpan tanggal acuan untuk Charts (Bar & Pie) ke state
+    setChartRefDate(auditStartWeek);
+
+    // 4. Tentukan Range Minggu Sebelumnya Lagi
     const prevStartWeek = new Date(auditStartWeek);
     prevStartWeek.setDate(prevStartWeek.getDate() - 7);
     
@@ -133,7 +126,7 @@ export default function Beranda() {
         return d >= start.getTime() && d <= end.getTime();
     };
 
-    // Filter Data Scorecard (Hanya data di periode Audit Terakhir)
+    // Filter Data Scorecard
     const thisWeekData = auditData.filter(item => isInRange(item.tanggal, auditStartWeek, auditEndWeek));
     const prevWeekData = auditData.filter(item => isInRange(item.tanggal, prevStartWeek, prevEndWeek));
 
@@ -147,12 +140,10 @@ export default function Beranda() {
             }
             
             if (type === 'pengeluaran') {
-                // Logika Pengeluaran yang lebih inklusif
                 return t.includes('pengeluaran') || item.produk_id === null;
             }
             return false;
         }).reduce((sum, item) => {
-            // Pastikan nilai positif agar penjumlahan benar
             const val = Number(item.total_pendapatan) || 0;
             return sum + Math.abs(val);
         }, 0);
@@ -167,14 +158,12 @@ export default function Beranda() {
     const prevPengeluaran = calcTotal(prevWeekData, 'pengeluaran');
     const prevProfit = prevPendapatan - prevPengeluaran;
 
-    // Format Header Tanggal
     const formatHeaderDate = (date) => {
         return date.toLocaleDateString('id-ID', { 
             day: 'numeric', month: 'long', year: 'numeric' 
         });
     };
     
-    // Tampilkan label sesuai periode Audit Terakhir (10-16 Nov)
     const startStr = formatHeaderDate(auditStartWeek);
     const endStr = formatHeaderDate(auditEndWeek);
 
@@ -187,109 +176,9 @@ export default function Beranda() {
       diffProfit: currProfit - prevProfit,
       mingguData: `${startStr} - ${endStr}`
     });
-
-    // --- UPDATE CHART LOGIC ---
-    // Kirim auditStartWeek sebagai titik akhir grafik
-    // Grafik akan menampilkan 4 minggu yang berakhir pada auditStartWeek (10-16 Nov)
-    // Data minggu berjalan (17 Nov ke atas) TIDAK akan masuk grafik.
-    processChartData(auditStartWeek);
   };
 
-  const processChartData = (lastAuditStart) => {
-    // Tentukan End Date dari minggu audit terakhir
-    const lastAuditEnd = new Date(lastAuditStart);
-    lastAuditEnd.setDate(lastAuditStart.getDate() + 6);
-    lastAuditEnd.setHours(23, 59, 59, 999);
-
-    // --- PIE CHART (Proporsi Produk selama 4 Minggu Audit Terakhir) ---
-    const pieDataFiltered = auditData.filter(item => {
-      const d = new Date(item.tanggal);
-      // Mundur 3 minggu dari audit terakhir = Total 4 minggu
-      const startOf4Weeks = new Date(lastAuditStart);
-      startOf4Weeks.setDate(startOf4Weeks.getDate() - 21); 
-      
-      return d >= startOf4Weeks && d <= lastAuditEnd && 
-             (item.jenis_transaksi.toLowerCase().includes('pemasukan') || item.jenis_transaksi.toLowerCase().includes('penjualan'));
-    });
-
-    const productStats = {};
-    pieDataFiltered.forEach(item => {
-      const pName = item.produk?.nama_produk || 'Lainnya';
-      productStats[pName] = (productStats[pName] || 0) + item.jumlah;
-    });
-
-    const bgColors = {
-        'Kerupuk Kulit': '#4CAF50', 
-        'Stik Bawang': '#FF9800',   
-        'Keripik Bawang': '#2196F3',
-        'Lainnya': '#9E9E9E'
-    };
-
-    const labels = Object.keys(productStats);
-    const dataPie = Object.values(productStats);
-    const colors = labels.map(label => bgColors[label] || '#607D8B');
-
-    setPieData({
-      labels: labels,
-      datasets: [{
-        data: dataPie,
-        backgroundColor: colors,
-        borderWidth: 1,
-      }]
-    });
-
-    // --- BAR CHART (4 Minggu Terakhir) ---
-    const weeksLabels = [];
-    const productList = ['Kerupuk Kulit', 'Stik Bawang', 'Keripik Bawang'];
-    const weeklyData = {};
-    productList.forEach(p => weeklyData[p] = [0, 0, 0, 0]);
-
-    // Loop 4 minggu mundur (i=0 adalah minggu audit terakhir)
-    for (let i = 3; i >= 0; i--) {
-       const searchStart = new Date(lastAuditStart);
-       searchStart.setDate(lastAuditStart.getDate() - (i * 7));
-       
-       const searchEnd = new Date(searchStart);
-       searchEnd.setDate(searchStart.getDate() + 6);
-       searchEnd.setHours(23, 59, 59);
-
-       const formatShort = (date) => {
-           const d = date.getDate().toString().padStart(2, '0');
-           const m = (date.getMonth() + 1).toString().padStart(2, '0');
-           const y = date.getFullYear().toString().slice(-2); 
-           return `${d}/${m}/${y}`;
-       };
-
-       const startStrShort = formatShort(searchStart);
-       const endStrShort = formatShort(searchEnd);
-       
-       weeksLabels.push([`Minggu ${4-i}`, `(${startStrShort} - ${endStrShort})`]);
-
-       const weekData = auditData.filter(item => {
-          const d = new Date(item.tanggal);
-          return d >= searchStart && d <= searchEnd && 
-             (item.jenis_transaksi.toLowerCase().includes('pemasukan') || item.jenis_transaksi.toLowerCase().includes('penjualan'));
-       });
-
-       weekData.forEach(item => {
-          const pName = item.produk?.nama_produk;
-          if (weeklyData[pName]) {
-             weeklyData[pName][3 - i] += item.jumlah; 
-          }
-       });
-    }
-
-    setBarData({
-      labels: weeksLabels,
-      datasets: [
-        { label: 'Kerupuk Kulit', data: weeklyData['Kerupuk Kulit'], backgroundColor: '#4CAF50' },
-        { label: 'Stik Bawang', data: weeklyData['Stik Bawang'], backgroundColor: '#FF9800' },
-        { label: 'Keripik Bawang', data: weeklyData['Keripik Bawang'], backgroundColor: '#2196F3' },
-      ]
-    });
-  };
-
-  // --- FILTER DATA TABEL (Tabel tetap menampilkan SEMUA data terbaru) ---
+  // --- FILTER DATA TABEL ---
   const filterTableData = () => {
       const filtered = auditData.filter(item => {
           const pName = item.produk?.nama_produk || '';
@@ -297,7 +186,6 @@ export default function Beranda() {
           const combinedSearch = (pName + sumber + item.jenis_transaksi).toLowerCase();
           return combinedSearch.includes(searchTerm.toLowerCase());
       });
-      // Sort Descending (Terbaru di atas)
       filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
       setFilteredTableData(filtered);
   };
@@ -367,7 +255,7 @@ export default function Beranda() {
 
       <div className="max-w-7xl mx-auto px-4 pb-12">
         
-        {/* --- Score Cards (DENGAN TREN) --- */}
+        {/* --- Score Cards --- */}
         <div className="flex flex-col md:flex-row justify-center gap-6 mt-4">
             <SummaryCard 
                 title="Total Pendapatan" 
@@ -403,7 +291,8 @@ export default function Beranda() {
             <div className="bg-white p-6 rounded-xl shadow-md lg:col-span-1 flex flex-col">
                 <h3 className="text-lg font-bold text-gray-800 mb-6 text-center border-b pb-2">Persentase Penjualan</h3>
                 <div className="flex-1 relative min-h-[250px]">
-                    {pieData ? <PieChart data={pieData} /> : <p className="text-center text-gray-400 mt-10">Loading...</p>}
+                    {/* Mengirim rawData dan referenceDate, PieChart akan memproses sendiri */}
+                    <PieChart rawData={auditData} referenceDate={chartRefDate} />
                 </div>
                 <div className="mt-6 flex items-start justify-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
                     <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -419,7 +308,7 @@ export default function Beranda() {
             <div className="bg-white p-6 rounded-xl shadow-md lg:col-span-2 flex flex-col">
                 <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Grafik Penjualan (4 Minggu Terakhir)</h3>
                 <div className="flex-1 relative min-h-[300px]">
-                    {barData ? <BarChart data={barData} /> : <p className="text-center text-gray-400 mt-10">Loading...</p>}
+                    <BarChart rawData={auditData} referenceDate={chartRefDate} />
                 </div>
             </div>
 
@@ -443,7 +332,7 @@ export default function Beranda() {
               </div>
             </div>
 
-            {/* Tabel tetap scrollable */}
+            {/* Tabel Scrollable */}
             <div className="overflow-x-auto overflow-y-auto max-h-[400px] border rounded-lg custom-scrollbar">
               <table className="w-full text-sm text-center border-collapse relative">
                 <thead className="sticky top-0 z-10 shadow-sm uppercase text-xs tracking-wide">

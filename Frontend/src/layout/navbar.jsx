@@ -1,6 +1,6 @@
+// File: Frontend/src/layout/navbar.jsx
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import logo from "../assets/logo.png";
 import { showConfirmToast } from "../components/Toast";
 
 export default function Navbar({ username }) {
@@ -58,7 +58,7 @@ export default function Navbar({ username }) {
   return (
     <nav className="fixed top-0 left-0 w-full flex items-center justify-between bg-[#FFC63C] px-6 py-3 shadow-md rounded-md font-[Poppins] z-50">
       <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-        <img src={logo} alt="Logo" className="w-12 h-12 rounded-md bg-transparent" />
+        <img src="/logo.png" alt="Logo" className="w-12 h-12 rounded-md bg-transparent"/>
         <span className="font-semibold text-[#3b2f00] leading-tight">
           Kembar<br />Barokah
         </span>
@@ -100,8 +100,6 @@ export default function Navbar({ username }) {
         )}
       </div>
 
-      
-
       {/* Mobile User Button - Opens Sidebar */}
       <button
         onClick={toggleMenu}
@@ -123,7 +121,7 @@ export default function Navbar({ username }) {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-6 border-b border-[#FFB300]">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="Logo" className="w-10 h-10 rounded-md bg-transparent" />
+              <img src="/logo.png" alt="Logo" className="w-10 h-10 rounded-md bg-transparent"/>
               <span className="font-semibold text-[#3b2f00] leading-tight">
                 Kembar<br />Barokah
               </span>

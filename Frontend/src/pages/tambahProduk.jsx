@@ -1,3 +1,4 @@
+// File: src/pages/tambahProduk.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../layout/navbar";
@@ -123,11 +124,6 @@ export default function InputProduk() {
       }
 
       const token = localStorage.getItem("token");
-      
-      // Debugging: Cek apa yang dikirim
-      // for (var pair of submitData.entries()) {
-      //     console.log(pair[0]+ ', ' + pair[1]); 
-      // }
 
       await api.post("/produk", submitData, {
         headers: {

@@ -1,3 +1,4 @@
+// File: src/components/Toast.jsx
 import { toast, Slide } from 'react-toastify';
 import '../App.css';
 

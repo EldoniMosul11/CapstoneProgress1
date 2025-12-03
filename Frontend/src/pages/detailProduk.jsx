@@ -6,10 +6,9 @@ import kosong from "../assets/kosong.png";
 import garis from "../assets/garis.svg";
 import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete.svg";
-import locationIcon from "../assets/lokasi.svg"; // Pastikan Anda punya icon ini atau ganti dengan SVG inline
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
-// Data dummy fallback
+// --- Constants / Fallback Data ---
 const initialProdukData = {
   id: 0,
   name: "Memuat...",
@@ -21,14 +20,18 @@ const initialProdukData = {
 };
 
 export default function DetailProduk() {
+  // --- State Management ---
   const [user, setUser] = useState(null);
   const [produk, setProduk] = useState(initialProdukData);
   const [customers, setCustomers] = useState([]); 
+  
+  // --- Hooks ---
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // --- EFFECTS ---
+  // --- Side Effects (Data Fetching) ---
   useEffect(() => {
+    // 1. Verifikasi User (Auth Check)
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -41,8 +44,8 @@ export default function DetailProduk() {
         navigate("/");
       }
     };
-    fetchUser();
 
+    // 2. Ambil Detail Produk
     const fetchProduk = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -50,7 +53,7 @@ export default function DetailProduk() {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        // Transformasi Data
+        // Normalisasi Data (Backend -> Frontend format)
         const transformedProduk = {
           id: res.data.id,
           name: res.data.nama_produk,
@@ -66,6 +69,7 @@ export default function DetailProduk() {
       }
     };
 
+    // 3. Ambil Daftar Customer Terkait Produk Ini
     const fetchCustomers = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -79,6 +83,8 @@ export default function DetailProduk() {
       }
     };
 
+    // Eksekusi fungsi
+    fetchUser();
     if (id) {
       fetchProduk();
       fetchCustomers();
@@ -86,11 +92,12 @@ export default function DetailProduk() {
 
   }, [navigate, id]);
 
-  // --- HANDLERS ---
-  const handleEdit = () => {
+  // --- Event Handlers (Produk) ---
+  const handleEditProduk = () => {
     navigate(`/produk/edit/${id}`);
   };
 
+  // --- Event Handlers (Customer) ---
   const handleAddCostumer = () => {
     navigate(`/produk/add-customer/${id}`);
   };
@@ -108,6 +115,8 @@ export default function DetailProduk() {
           await api.delete(`/customer/${customerId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          
+          // Update state lokal (optimistic update)
           setCustomers(customers.filter(customer => customer.id !== customerId));
           showSuccessToast("Customer berhasil dihapus!");
         } catch (err) {
@@ -118,24 +127,24 @@ export default function DetailProduk() {
     );
   };
 
+  // --- Render UI ---
   return (
     <div className="min-h-screen bg-gray-100 font-poppins pb-20">
       
-      {/* Header Section */}
+      {/* 1. Header Section */}
       <div className="pt-4 flex justify-center items-center text-center gap-3">
         <img src={garis} alt="" className="w-[30%]" />
         <h1 className="text-2xl font-bold text-red-900">DETAIL PRODUK</h1>
         <img src={garis} alt="" className="w-[30%]" />
       </div>
 
-      {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 py-8">
         
-        {/* --- Product Detail Card --- */}
+        {/* 2. Product Detail Card */}
         <div className="bg-[#FEF8C1] rounded-xl shadow-md p-8 mb-8 border border-yellow-200">
           <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-start">
             
-            {/* Product Image */}
+            {/* A. Product Image */}
             <div className="flex-shrink-0">
               <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white flex items-center justify-center">
                  <img
@@ -147,12 +156,12 @@ export default function DetailProduk() {
               </div>
             </div>
 
-            {/* Product Info */}
+            {/* B. Product Info */}
             <div className="flex-grow w-full">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-3xl font-bold text-gray-800">{produk.name}</h2>
                 <button
-                  onClick={handleEdit}
+                  onClick={handleEditProduk}
                   className="bg-black hover:bg-gray-800 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-md"
                 >
                   <img src={editIcon} className="w-4 h-4 invert brightness-0 invert" alt="" /> 
@@ -168,7 +177,7 @@ export default function DetailProduk() {
                 </p>
               </div>
 
-              {/* Stock and Price Info (Grid) */}
+              {/* Stock and Price Grid */}
               <div className="grid grid-cols-2 gap-6 mb-2">
                 <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
                   <p className="text-sm text-gray-500 font-medium">Stok Tersedia</p>
@@ -183,7 +192,7 @@ export default function DetailProduk() {
           </div>
         </div>
 
-        {/* --- Customers Section --- */}
+        {/* 3. Customers Section (Table) */}
         <div className="bg-white rounded-xl shadow-md p-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-800 border-l-4 border-red-500 pl-3">DETAIL CUSTOMERS</h2>
@@ -217,10 +226,9 @@ export default function DetailProduk() {
                         </span>
                     </td>
                     
-                    {/* --- BAGIAN ALAMAT (DIPERBAIKI) --- */}
+                    {/* Kolom Alamat dengan Ikon SVG Inline */}
                     <td className="py-3 px-4 text-left">
                       <div className="flex items-start gap-2">
-                        {/* Ikon Lokasi (SVG Inline agar tidak perlu import gambar jika tidak ada) */}
                         <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -231,6 +239,7 @@ export default function DetailProduk() {
                       </div>
                     </td>
 
+                    {/* Kolom Aksi (Edit/Hapus) */}
                     <td className="py-3 px-4">
                         <div className="flex justify-center gap-3">
                           <button
@@ -255,6 +264,7 @@ export default function DetailProduk() {
             </table>
           </div>
 
+          {/* Empty State */}
           {customers.length === 0 && (
             <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-b-lg border-t border-gray-100">
               <p className="text-lg">Tidak ada data customers untuk produk ini</p>
@@ -262,7 +272,7 @@ export default function DetailProduk() {
           )}
         </div>
 
-        {/* Back Button */}
+        {/* 4. Footer Actions (Back Button) */}
         <div className="flex justify-end mt-8">
           <button
             onClick={() => navigate("/menu-produk")}

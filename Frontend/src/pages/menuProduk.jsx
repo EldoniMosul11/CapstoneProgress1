@@ -1,4 +1,4 @@
-// MenuProduk.jsx
+// File: src/pages/menuProduk.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -7,15 +7,18 @@ import garis from "../assets/garis.svg";
 import tambah from "../assets/tambah.svg";
 import { showSuccessToast, showErrorToast, showConfirmToast } from "../components/Toast";
 
-// Data produk dari database
 export default function MenuProduk() {
+  // --- State Declaration ---
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   const navigate = useNavigate();
 
+  // --- Side Effects (Data Fetching) ---
   useEffect(() => {
+    // 1. Fungsi Mengambil Data User
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -29,26 +32,30 @@ export default function MenuProduk() {
       }
     };
 
+    // 2. Fungsi Mengambil Data Produk
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
         setError(null);
         const token = localStorage.getItem("token");
+        
         const res = await api.get("/produk", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        // Transform API data to match frontend format
-        const transformedProducts = res.data.map(product => ({
+
+        // Transformasi data API agar sesuai format frontend
+        const transformedProducts = res.data.map((product) => ({
           id: product.id,
           name: product.nama_produk,
           stock: product.stok_tersedia,
-          image: product.gambar || kosong // Use kosong.png for empty images
+          // Gunakan gambar dari DB atau fallback ke gambar 'kosong'
+          image: product.gambar || null, 
         }));
+
         setProducts(transformedProducts);
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Gagal memuat data produk");
-        // No fallback to dummy data - show error instead
         setProducts([]);
       } finally {
         setIsLoading(false);
@@ -59,23 +66,25 @@ export default function MenuProduk() {
     fetchProducts();
   }, [navigate]);
 
+  // --- Event Handlers ---
+
   const handleDetail = (product) => {
-    // Navigasi ke halaman detail produk dengan ID
+    // Navigasi ke halaman detail produk
     navigate(`/detailProduk/${product.id}`);
   };
 
-  const handleTambahStok = (product) => {
-    // Navigasi ke halaman edit produk dengan ID
+  const handleEditProduk = (product) => {
+    // Navigasi ke halaman edit (sebelumnya bernama handleTambahStok)
     navigate(`/produk/edit/${product.id}`);
   };
 
   const handleTambahProduk = () => {
-    // alert('Fitur Tambah Produk akan dibuka (demo)');
-    // Navigasi ke halaman tambah produk
+    // Navigasi ke halaman input produk baru
     navigate("/produk/input");
   };
 
   const handleDeleteProduk = async (product) => {
+    // Tampilkan konfirmasi sebelum hapus
     showConfirmToast(
       `Apakah Anda yakin ingin menghapus produk "${product.name}"?`,
       async () => {
@@ -84,8 +93,9 @@ export default function MenuProduk() {
           await api.delete(`/produk/${product.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          // Remove product from state
-          setProducts(products.filter(p => p.id !== product.id));
+          
+          // Update state lokal setelah berhasil hapus di DB
+          setProducts(products.filter((p) => p.id !== product.id));
           showSuccessToast("Produk berhasil dihapus!");
         } catch (error) {
           console.error("Error deleting product:", error);
@@ -95,27 +105,28 @@ export default function MenuProduk() {
     );
   };
 
+  // --- Render UI ---
   return (
     <div className="min-h-screen bg-gray-100 font-poppins">
 
-
-      {/* Welcome Section */}
+      {/* 1. Header Section */}
       <div className="pt-4 flex justify-center items-center text-center gap-3">
         <img src={garis} alt="" className="w-[40%]" />
-        <h1 className="text-2xl font-bold text-red-900">
-          MENU PRODUK
-        </h1>
+        <h1 className="text-2xl font-bold text-red-900">MENU PRODUK</h1>
         <img src={garis} alt="" className="w-[40%]" />
       </div>
 
-      {/* Product Grid Section */}
+      {/* 2. Main Content (Grid System) */}
       <div className="max-w-6xl mx-auto px-4 py-8">
+        
+        {/* Loading State */}
         {isLoading ? (
           <div className="text-center py-8">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-900"></div>
             <p className="mt-2 text-gray-600">Memuat produk...</p>
           </div>
         ) : error ? (
+          /* Error State */
           <div className="text-center py-8">
             <div className="text-red-500 mb-4">
               <i className="fas fa-exclamation-triangle text-4xl"></i>
@@ -129,28 +140,35 @@ export default function MenuProduk() {
             </button>
           </div>
         ) : (
+          /* Success State (Data Grid) */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Product Cards */}
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-[#FEF8C1] rounded-xl shadow-lg p-3 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-amber-200/50"
-            >
-              <div className="flex justify-center mb-4">
-                <div className="w-full h-60 overflow-hidden rounded-lg">
-                  <img
-                    src={product.image ? `http://localhost:5000${product.image}` : pangsit}
-                    alt={product.name}
-                    className="w-contain h-full object-cover"
-                  />
+            
+            {/* Loop Data Produk */}
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="bg-[#FEF8C1] rounded-xl shadow-lg p-3 flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-amber-200/50"
+              >
+                {/* Gambar Produk */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-full h-60 overflow-hidden rounded-lg">
+                    <img
+                      src={product.image ? `http://localhost:5000${product.image}` : kosong}
+                      alt={product.name}
+                      className="w-contain h-full object-cover"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                {/* Info Produk */}
                 <h3 className="text-xl font-semibold text-gray-800 text-left">
                   {product.name}
                 </h3>
                 <div className="flex text-gray-600 mb-4">
                   <span>Sisa Stok: {product.stock}</span>
                 </div>
+
+                {/* Action Buttons */}
                 <div className="flex gap-2 mt-auto">
                   <button
                     onClick={() => handleDetail(product)}
@@ -159,7 +177,7 @@ export default function MenuProduk() {
                     <span>Detail</span>
                   </button>
                   <button
-                    onClick={() => handleTambahStok(product)}
+                    onClick={() => handleEditProduk(product)}
                     className="flex items-center justify-center gap-2 bg-[#004A1C] text-white py-2 px-4 rounded-lg flex-1 hover:from-emerald-500 hover:to-emerald-600 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                   >
                     <span>Edit</span>
@@ -174,7 +192,7 @@ export default function MenuProduk() {
               </div>
             ))}
 
-            {/* Tambah Produk Card */}
+            {/* Tombol Tambah Produk (Card Statis) */}
             <div className="bg-white rounded-xl shadow-md p-6 flex flex-col transition-all duration-300 hover:shadow-lg">
               <button
                 onClick={handleTambahProduk}
@@ -188,6 +206,7 @@ export default function MenuProduk() {
                 <p className="text-lg font-medium">Tambah Produk</p>
               </button>
             </div>
+
           </div>
         )}
       </div>

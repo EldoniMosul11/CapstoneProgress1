@@ -97,7 +97,7 @@ export const changePassword = (req, res) => {
       return res.status(404).json({ message: "User tidak ditemukan" });
 
     const user = data[0];
-    // menggunakan bcrypt.compare untuk verifikasi password lama
+    // Menggunakan bcrypt.compare untuk verifikasi password lama
     bcrypt.compare(oldPassword, user.password, (err, isMatch) => {
       if (err) return res.status(500).json({ message: "Error validasi password", error: err });
       if (!isMatch) return res.status(401).json({ message: "Password lama salah" });

@@ -1,3 +1,4 @@
+// File: src/pages/inputPemasukan.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
@@ -86,7 +87,7 @@ export default function InputPemasukan() {
     } catch (error) {
       console.error("Error adding pemasukan:", error);
 
-      // --- PERBAIKAN UTAMA: TANGKAP PESAN DARI BACKEND ---
+      // Tangkap pesan error dari backend
       if (error.response && error.response.data && error.response.data.message) {
           // Tampilkan pesan spesifik (misal: "Stok tidak mencukupi...")
           showErrorToast(`Gagal: ${error.response.data.message}`);
